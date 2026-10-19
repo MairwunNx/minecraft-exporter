@@ -136,7 +136,7 @@ The [minecraft-grafana](https://github.com/MairwunNx/minecraft-grafana) dashboar
 
 ## Try it live
 
-Moonlands, my hard survival server with friends, runs the exporter and shows the dashboard to everyone: [minecraft.mairwunnx.com/grafana](https://minecraft.mairwunnx.com/grafana/d/minecraft-worldapi/minecraft).
+Moonlands, my hard survival server with friends, runs the exporter and shows the dashboard to everyone: [minecraft.mairwunnx.com/grafana](https://minecraft.mairwunnx.com/grafana/d/minecraft-worldapi).
 
 [![Play on Moonlands: pure vanilla, hard mobs, AI, claims. minecraft.mairwunnx.com](https://raw.githubusercontent.com/MairwunNx/minecraft-worldapi/master/media/og-adv-image.png)](https://minecraft.mairwunnx.com)
 

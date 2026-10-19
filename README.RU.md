@@ -136,7 +136,7 @@ scrape_configs:
 
 ## Посмотреть вживую
 
-Moonlands, мой сервер для хардкорного выживания с друзьями, работает с этим экспортером и показывает дашборд всем: [minecraft.mairwunnx.com/grafana](https://minecraft.mairwunnx.com/grafana/d/minecraft-worldapi/minecraft).
+Moonlands, мой сервер для хардкорного выживания с друзьями, работает с этим экспортером и показывает дашборд всем: [minecraft.mairwunnx.com/grafana](https://minecraft.mairwunnx.com/grafana/d/minecraft-worldapi).
 
 [![Играйте на Moonlands: чистая ванилла, сложные мобы, ИИ, приваты. minecraft.mairwunnx.com](https://raw.githubusercontent.com/MairwunNx/minecraft-worldapi/master/media/og-adv-image.png)](https://minecraft.mairwunnx.com)
 
