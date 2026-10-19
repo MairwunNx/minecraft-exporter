@@ -1,6 +1,7 @@
 # A whole monitoring stack next to your server: the exporter, Prometheus, and Grafana with the
-# dashboard ready. Fetch the dashboard into grafana/dashboards/ as the README says, set WORLDAPI_URL
-# to your WorldAPI, and run `docker compose up -d`, then open http://localhost:3000 (admin / admin).
+# dashboard ready. Fetch the dashboard into grafana/dashboards/ as the wiki's “Installation” page
+# says, set WORLDAPI_URL to your WorldAPI, and run `docker compose up -d`, then open
+# http://localhost:3000 (admin / admin).
 services:
   minecraft-exporter:
     image: ghcr.io/mairwunnx/minecraft-exporter:latest
