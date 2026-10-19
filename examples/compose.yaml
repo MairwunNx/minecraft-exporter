@@ -1,0 +1,39 @@
+# A whole monitoring stack next to your server: the exporter, Prometheus, and Grafana with the
+# dashboard ready. Fetch the dashboard into grafana/dashboards/ as the README says, set WORLDAPI_URL
+# to your WorldAPI, and run `docker compose up -d`, then open http://localhost:3000 (admin / admin).
+services:
+  minecraft-exporter:
+    image: ghcr.io/mairwunnx/minecraft-exporter:latest
+    restart: unless-stopped
+    environment:
+      WORLDAPI_URL: ${WORLDAPI_URL:-http://host.docker.internal:8110/api/v1}
+      # Optional here: a token reads what anonymous visitors can't, like chat counts.
+      WORLDAPI_TOKEN: ${WORLDAPI_TOKEN:-}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus:/prometheus
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    restart: unless-stopped
+    ports: ["3000:3000"]
+    environment:
+      # Infinity reads chat and events straight from WorldAPI for the tables at the bottom;
+      # they need WORLDAPI_TOKEN with events:read and chat:read.
+      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource
+      WORLDAPI_URL: ${WORLDAPI_URL:-http://host.docker.internal:8110/api/v1}
+      WORLDAPI_TOKEN: ${WORLDAPI_TOKEN:-}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+
+volumes:
+  prometheus:
+  grafana:

@@ -1,0 +1,6 @@
+{
+  "folders": [{ "name": "minecraft-exporter", "path": "." }],
+  "extensions": {
+    "recommendations": ["golang.go", "github.vscode-github-actions", "redhat.vscode-yaml"]
+  }
+}

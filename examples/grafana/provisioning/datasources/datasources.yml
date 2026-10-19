@@ -1,0 +1,22 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: 15s
+
+  # Chat and event tables. Grafana calls WorldAPI from the server, so the token never reaches a browser.
+  - name: WorldAPI
+    uid: worldapi
+    type: yesoreyeram-infinity-datasource
+    url: $WORLDAPI_URL
+    jsonData:
+      auth_method: bearerToken
+      allowedHosts: [$WORLDAPI_URL]
+    secureJsonData:
+      bearerToken: $WORLDAPI_TOKEN
