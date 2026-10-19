@@ -18,6 +18,7 @@ A Prometheus exporter that reads a Minecraft server through WorldAPI (MairwunNx/
 | `internal/collector/server.go` | Server, performance, JVM, worlds, online players |
 | `internal/collector/stats.go` | Player statistics from leaderboards, cached and refreshed a batch per scrape |
 | `internal/collector/events.go` | Counters fed by `GET /events`, counted from the exporter's start |
+| `internal/collector/private.go` | What a token opens: the host, the console, plugins, moderation, Mo’Bosses, what crowds each world |
 
 ## Rules that keep it working
 
@@ -25,7 +26,9 @@ A Prometheus exporter that reads a Minecraft server through WorldAPI (MairwunNx/
 - The `minecraft-grafana` dashboard uses these metrics. When one is added, renamed, or changes meaning, change the dashboard in the same go, and the metrics table in both READMEs.
 - Labels stay bounded: worlds, entity types (the top ten WorldAPI names), players, event types, death causes. Never a label from free text such as a chat message or a death message.
 - A scrape stays within WorldAPI's limit for anonymous clients (120 requests a minute, bursts of 30): leaderboards refresh `statsBatch` at a time. Count the requests when adding an endpoint.
-- A failed or forbidden request drops only its own metrics and counts in `minecraft_exporter_request_errors_total`; `minecraft_up` follows `GET /server` alone.
+- A failed request drops only its own metrics and counts in `minecraft_exporter_request_errors_total`. A refusal (401, 403) is not an error: `done()` closes the endpoint for 10 minutes, `allowed()` skips it, and `minecraft_exporter_endpoint_allowed` shows it. `minecraft_up` follows `GET /server` alone.
+- Data behind a permission goes through `allowed()` and `done()` with the endpoint's name, and the README's “More with a token” table and metrics table name the permission. Slow data (once a minute or rarer) joins the batched queue in `privateItems()`.
+- Metrics from a token can reveal positions, chat, and the machine: the README's warning about keeping them private stays.
 - Never print or log `WORLDAPI_TOKEN`. The owner's read-only WorldAPI token lives in `~/.secrets/cloud.env` as `WORLDAPI_TOKEN`.
 
 ## Checking a change

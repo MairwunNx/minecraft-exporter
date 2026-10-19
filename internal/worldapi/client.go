@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -140,6 +141,60 @@ func (c *Client) GetPlayers(ctx context.Context) ([]PlayerSummary, error) {
 func (c *Client) GetLeaderboard(ctx context.Context, statistic string) (*Leaderboard, error) {
 	var out Leaderboard
 	return &out, c.Get(ctx, "/leaderboards/"+url.PathEscape(statistic), url.Values{"limit": {"500"}}, &out)
+}
+
+// GetSystem reads GET /server/system: the host (system:read).
+func (c *Client) GetSystem(ctx context.Context) (*System, error) {
+	var out System
+	return &out, c.Get(ctx, "/server/system", nil, &out)
+}
+
+// GetLogs reads the newest console lines of GET /server/logs, oldest first (logs:read).
+func (c *Client) GetLogs(ctx context.Context, limit int) ([]LogLine, error) {
+	var out struct {
+		Lines []LogLine `json:"lines"`
+	}
+	return out.Lines, c.Get(ctx, "/server/logs", url.Values{"limit": {strconv.Itoa(limit)}}, &out)
+}
+
+// GetPlugins reads GET /server/plugins.
+func (c *Client) GetPlugins(ctx context.Context) ([]Plugin, error) {
+	var out []Plugin
+	return out, c.Get(ctx, "/server/plugins", nil, &out)
+}
+
+// GetModeration reads the bans, operators, and whitelist (players:moderate).
+func (c *Client) GetModeration(ctx context.Context) (*Moderation, error) {
+	var (
+		out       Moderation
+		bans      struct{ Players, Ips []json.RawMessage }
+		ops       struct{ Players []json.RawMessage }
+		whitelist struct{ Players []json.RawMessage }
+	)
+	if err := c.Get(ctx, "/server/bans", nil, &bans); err != nil {
+		return nil, err
+	}
+	if err := c.Get(ctx, "/server/ops", nil, &ops); err != nil {
+		return nil, err
+	}
+	if err := c.Get(ctx, "/server/whitelist", nil, &whitelist); err != nil {
+		return nil, err
+	}
+	out.BannedPlayers, out.BannedAddresses = len(bans.Players), len(bans.Ips)
+	out.Operators, out.Whitelisted = len(ops.Players), len(whitelist.Players)
+	return &out, nil
+}
+
+// GetEntitySummary reads GET /worlds/{world}/entities/summary: what crowds a world.
+func (c *Client) GetEntitySummary(ctx context.Context, world string) (*EntitySummary, error) {
+	var out EntitySummary
+	return &out, c.Get(ctx, "/worlds/"+url.PathEscape(world)+"/entities/summary", nil, &out)
+}
+
+// GetBossStats reads Mo’Bosses' GET /extensions/mobosses/stats.
+func (c *Client) GetBossStats(ctx context.Context) (*BossStats, error) {
+	var out BossStats
+	return &out, c.Get(ctx, "/extensions/mobosses/stats", nil, &out)
 }
 
 // GetExtensions reads GET /extensions: the plugins that share data through WorldAPI.

@@ -88,7 +88,7 @@ func run() error {
 			return nil, fmt.Errorf("token file: %w", err)
 		}
 		client := worldapi.NewClient(rawURL, secret, userAgent, httpClient)
-		return collector.NewTarget(name, client, collector.Options{Players: perPlayer, StatsInterval: interval}, errorsTotal), nil
+		return collector.NewTarget(name, client, collector.Options{Players: perPlayer, StatsInterval: interval, Token: secret != ""}, errorsTotal), nil
 	}
 
 	var primary *collector.Target

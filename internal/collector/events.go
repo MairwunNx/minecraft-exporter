@@ -28,11 +28,12 @@ type eventCounts struct {
 	byType       map[string]float64
 	deaths       map[[2]string]float64 // cause, killer
 	advancements map[string]float64    // frame
+	chat         map[string]float64    // player
 	firstJoins   float64
 }
 
 func newEventCounts() eventCounts {
-	counts := eventCounts{byType: map[string]float64{}, deaths: map[[2]string]float64{}, advancements: map[string]float64{}}
+	counts := eventCounts{byType: map[string]float64{}, deaths: map[[2]string]float64{}, advancements: map[string]float64{}, chat: map[string]float64{}}
 	for _, kind := range seededTypes {
 		counts.byType[kind] = 0
 	}
@@ -44,14 +45,16 @@ func newEventCounts() eventCounts {
 
 // pollEvents reads what was recorded since the last poll. The first poll only marks where to start.
 func (t *Target) pollEvents(ctx context.Context) {
+	if !t.allowed("events") {
+		return
+	}
 	t.eventsMu.Lock()
 	defer t.eventsMu.Unlock()
 	e := &t.events
 
 	if !e.started {
 		page, err := t.client.GetEvents(ctx, url.Values{"limit": {"1"}, "order": {"newest"}})
-		t.failed("events", err)
-		if err != nil {
+		if !t.done("events", err) {
 			return
 		}
 		if len(page.Items) > 0 {
@@ -59,7 +62,12 @@ func (t *Target) pollEvents(ctx context.Context) {
 		}
 		e.started = true
 		extensions, err := t.client.GetExtensions(ctx)
-		t.failed("extensions", err)
+		t.done("extensions", err)
+		t.accessMu.Lock()
+		for _, extension := range extensions {
+			t.namespaces = append(t.namespaces, extension.Namespace)
+		}
+		t.accessMu.Unlock()
 		for _, extension := range extensions {
 			for _, topic := range extension.Topics {
 				if _, seen := e.byType[topic.Topic]; topic.Recorded && !seen {
@@ -73,8 +81,7 @@ func (t *Target) pollEvents(ctx context.Context) {
 	query := url.Values{"limit": {strconv.Itoa(eventPage)}, "order": {"oldest"}, "from": {strconv.FormatInt(e.lastAt, 10)}}
 	for range 50 {
 		page, err := t.client.GetEvents(ctx, query)
-		t.failed("events", err)
-		if err != nil {
+		if !t.done("events", err) {
 			return
 		}
 		for _, event := range page.Items {
@@ -114,6 +121,10 @@ func (e *eventCounts) count(event worldapi.Event) {
 		}
 		_ = json.Unmarshal(event.Data, &data)
 		e.advancements[data.Frame]++
+	case "player.chat":
+		if event.Player != nil {
+			e.chat[event.Player.Name]++
+		}
 	case "player.join":
 		var data struct {
 			FirstJoin bool `json:"firstJoin"`
@@ -140,6 +151,11 @@ func (t *Target) collectEvents(out *emitter) {
 	}
 	for frame, n := range e.advancements {
 		out.counter("minecraft_advancements_total", "Advancements players made since the exporter started, by frame: task, goal, or challenge", n, "frame", frame)
+	}
+	if t.opts.Players {
+		for player, n := range e.chat {
+			out.counter("minecraft_player_chat_messages_total", "Chat messages a player sent since the exporter started; needs a token with chat:read", n, "player", player)
+		}
 	}
 	out.counter("minecraft_first_joins_total", "Players who joined for the first time since the exporter started", e.firstJoins)
 }

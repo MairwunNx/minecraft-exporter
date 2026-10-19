@@ -19,6 +19,7 @@
 - 🌍 **Worlds:** loaded chunks, entities and the most common types, block entities, time of day, the day count, weather.
 - 🧑‍🤝‍🧑 **Players:** who's online with ping, health, and level, when each player joined and was last seen, and lifetime statistics from the game itself: play time, deaths, kills, blocks mined, distance, diamonds, advancements, and more.
 - 💀 **Activity:** joins, deaths by cause and killer, advancements by frame, first-time players, and events other plugins share through WorldAPI, like boss kills.
+- 🔐 **More with a token:** the host's load, memory, and disk, the console's warnings and errors and who logged them, plugins and their versions, what crowds each world (items on the ground, villagers, the busiest chunks), where each player stands, and who chats how much.
 - 🛰️ **Many servers from one exporter**, the way the blackbox exporter does it.
 
 The exporter runs next to Prometheus, not inside the game: it asks WorldAPI on every scrape and costs the server a few HTTP requests.
@@ -46,7 +47,7 @@ curl -Lo grafana/dashboards/minecraft.json https://github.com/MairwunNx/minecraf
 WORLDAPI_URL=http://your-server:8110/api/v1 WORLDAPI_TOKEN=… docker compose up -d
 ```
 
-The token is optional for the metrics; the dashboard's chat and event tables need one with `events:read` and `chat:read`.
+The token is optional; the dashboard's chat, event, and console tables need one. Read “More with a token” before you set it.
 
 ### As a binary
 
@@ -113,11 +114,39 @@ Each setting is an environment variable or a flag.
 | `EXPORTER_TIMEOUT` | `--timeout` | `10s` | The longest a scrape may take |
 | `EXPORTER_LISTEN` | `--listen` | `:10059` | Where to serve metrics |
 
-**Tokens.** WorldAPI limits visitors to 120 requests a minute from one address. The exporter stays well under it, but if WorldAPI also serves a busy site from the same address, give the exporter a token with the `viewer` group. A token also counts chat messages, which visitors never see.
+## More with a token
+
+Without a token the exporter reads what WorldAPI shows to every visitor. A token opens more, permission by permission:
+
+| Permission | What it adds |
+|---|---|
+| `server:read` | Plugins and their versions, and what crowds each world: items on the ground, villagers, pets, named mobs, the busiest chunks with their hoppers |
+| `players:private` | Where each online player stands |
+| `chat:read` | Chat messages, in all and per player |
+| `system:read` | The host: load, memory, swap, the disk under the server folder, container limits, open files, the process's memory, Java |
+| `logs:read` | Console lines by level, and warnings and errors by who logged them |
+| `players:moderate` | Bans, operators, and the whitelist. This permission also bans and kicks, so leave it out unless you need the counts |
+
+A token with everything the exporter reads, and nothing it could change, goes into WorldAPI's `config.yml`:
+
+```yaml
+auth:
+  tokens:
+    - name: monitoring
+      token: "64 random hex characters, like the output of openssl rand -hex 32"
+      scopes: [viewer, "logs:read", "system:read"]
+```
+
+The `viewer` group holds `server:read`, `players:read`, `players:private`, `events:read`, and `chat:read`. Restart the server, then pass the token as `WORLDAPI_TOKEN` or `WORLDAPI_TOKEN_FILE`. `minecraft_exporter_endpoint_allowed` shows which endpoints the token opens; the exporter asks a closed one again every 10 minutes.
+
+> [!WARNING]
+> **Keep the metrics of a token private.** With a token the exporter publishes what WorldAPI hides from visitors: where every player stands, who chats how much, the console's warnings, the machine itself. Anyone who reaches `/metrics`, your Prometheus, or a Grafana with these metrics reads all of it. A Grafana data source holding the same token reads everything the token may, chat messages included. Keep the exporter, Prometheus, and Grafana behind a login or a firewall, never on a public address or with anonymous access, and give the token read permissions only.
+
+A token also gets WorldAPI's limit for tokens, 1200 requests a minute by default instead of 120 for a visitor, so the exporter refreshes statistics in bigger batches.
 
 ## Metrics
 
-Every metric starts with `minecraft_`. Event counters count from the exporter's start, the way Prometheus counters do; player statistics come from the game's own lifetime counters.
+Every metric starts with `minecraft_`. Event and console counters count from the exporter's start, the way Prometheus counters do; player statistics come from the game's own lifetime counters. The groups with a permission in brackets need a token that has it.
 
 | Group | Metrics |
 |---|---|
@@ -128,15 +157,22 @@ Every metric starts with `minecraft_`. Event counters count from the exporter's 
 | Online players | `player_info{uuid,world,gamemode}`, `player_ping_seconds`, `player_health`, `player_food`, `player_level`, `player_idle_seconds` |
 | Player statistics | `player_play_time_seconds_total`, `player_deaths_total`, `player_mob_kills_total`, `player_player_kills_total`, `player_damage_dealt_total`, `player_damage_taken_total`, `player_blocks_mined_total`, `player_items_crafted_total`, `player_distance_meters_total`, `player_jumps_total`, `player_fish_caught_total`, `player_animals_bred_total`, `player_animals_tamed_total`, `player_villager_trades_total`, `player_items_enchanted_total`, `player_diamonds_mined_total`, `player_ancient_debris_mined_total`, `player_experience_gained_total`, `player_advancements`, `player_first_join_timestamp_seconds`, `player_last_seen_timestamp_seconds` |
 | Activity | `events_total{type}`, `deaths_total{cause,killer}`, `advancements_total{frame}`, `first_joins_total` |
-| Exporter | `exporter_scrape_duration_seconds`, `exporter_request_errors_total{target,endpoint}`, `exporter_build_info` |
+| Chat (`chat:read`) | `player_chat_messages_total`, and `player.chat` in `events_total` |
+| Positions (`players:private`) | `player_position_blocks{world,axis}` |
+| Worlds (`server:read`) | `world_dropped_items`, `world_dropped_item_count`, `world_villagers`, `world_named_mobs`, `world_tamed_mobs`, `chunk_entities{chunk}`, `chunk_block_entities{chunk}`, `chunk_hoppers{chunk}` for the five busiest chunks |
+| Plugins (`server:read`) | `plugin_enabled{plugin,version}`, and `mobosses_alive`, `mobosses_spawned_total{type,class}`, `mobosses_killed_total{type,class}` when [Mo’Bosses](https://modrinth.com/plugin/mobosses) runs |
+| Host (`system:read`) | `host_load_average{window}`, `host_cpus`, `host_memory_{total,available}_bytes`, `host_swap_{total,free}_bytes`, `disk_{total,free}_bytes`, `container_memory_{limit,used}_bytes`, `container_cpu_limit`, `process_open_files`, `process_max_open_files`, `process_resident_memory_bytes`, `java_info{name,vendor,version}` |
+| Console (`logs:read`) | `log_messages_total{level}`, `log_problems_total{level,logger}` |
+| Moderation (`players:moderate`) | `bans{kind}`, `operators`, `whitelist_players` |
+| Exporter | `exporter_scrape_duration_seconds`, `exporter_request_errors_total{target,endpoint}`, `exporter_endpoint_allowed{endpoint}`, `exporter_build_info` |
 
 ## Grafana
 
 The [minecraft-grafana](https://github.com/MairwunNx/minecraft-grafana) dashboard draws all of this, plus live chat and event tables read straight from WorldAPI. Its README says how to import it.
 
-## Try it live
+## On Moonlands
 
-Moonlands, my hard survival server with friends, runs the exporter and shows the dashboard to everyone: [minecraft.mairwunnx.com/grafana](https://minecraft.mairwunnx.com/grafana/d/minecraft-worldapi).
+Moonlands, my hard survival server with friends, runs the exporter with a monitoring token behind a private Grafana. Its site, [minecraft.mairwunnx.com](https://minecraft.mairwunnx.com), reads the same WorldAPI.
 
 [![Play on Moonlands: pure vanilla, hard mobs, AI, claims. minecraft.mairwunnx.com](https://raw.githubusercontent.com/MairwunNx/minecraft-worldapi/master/media/og-adv-image.png)](https://minecraft.mairwunnx.com)
 

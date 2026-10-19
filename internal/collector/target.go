@@ -4,6 +4,7 @@ package collector
 import (
 	"context"
 	"errors"
+	"net/http"
 	"sync"
 	"time"
 
@@ -15,27 +16,41 @@ import (
 type Options struct {
 	// Players adds a player label to per-player metrics; without it they add up every player.
 	Players bool
-	// StatsInterval is how long statistics, which move slowly and cost a request each, stay cached.
+	// StatsInterval is how long slow data, like statistics, stays cached; each piece costs a request.
 	StatsInterval time.Duration
+	// Token says the exporter reads with a token, whose rate limit allows bigger batches.
+	Token bool
 }
 
+// deniedFor is how long the exporter leaves alone an endpoint its token may not read.
+const deniedFor = 10 * time.Minute
+
 // Target is one Minecraft server behind WorldAPI. It keeps what must survive between scrapes:
-// the event counters and the cached statistics.
+// the event and log counters, the cached slow data, and which endpoints the token may read.
 type Target struct {
 	Name   string
 	client *worldapi.Client
 	opts   Options
 	errors *prometheus.CounterVec
 
-	statsMu sync.Mutex
-	stats   statsCache
+	slowMu sync.Mutex
+	slow   slowCache
 
 	eventsMu sync.Mutex
 	events   eventCounts
+
+	logsMu sync.Mutex
+	logs   logCounts
+
+	accessMu   sync.Mutex
+	access     map[string]time.Time // endpoint → denied until; zero when allowed
+	worlds     []string             // the worlds the last scrape saw, for per-world slow data
+	namespaces []string             // plugins sharing data through WorldAPI
 }
 
 func NewTarget(name string, client *worldapi.Client, opts Options, errors *prometheus.CounterVec) *Target {
-	return &Target{Name: name, client: client, opts: opts, errors: errors, events: newEventCounts()}
+	return &Target{Name: name, client: client, opts: opts, errors: errors, events: newEventCounts(),
+		logs: newLogCounts(), access: map[string]time.Time{}}
 }
 
 // Scrape returns a collector that reads the server once, within ctx.
@@ -61,26 +76,41 @@ func (s *scrape) Collect(ch chan<- prometheus.Metric) {
 		performance *worldapi.Performance
 		worlds      []worldapi.World
 		online      *worldapi.OnlinePlayers
+		system      *worldapi.System
 		serverErr   error
 	)
-	wg.Go(func() { server, serverErr = t.client.GetServer(ctx); t.failed("server", serverErr) })
+	wg.Go(func() { server, serverErr = t.client.GetServer(ctx); t.done("server", serverErr) })
 	wg.Go(func() {
 		var err error
 		performance, err = t.client.GetPerformance(ctx)
-		t.failed("server/performance", err)
+		t.done("server/performance", err)
 	})
 	wg.Go(func() {
 		var err error
-		worlds, err = t.client.GetWorlds(ctx)
-		t.failed("worlds", err)
+		if worlds, err = t.client.GetWorlds(ctx); t.done("worlds", err) {
+			t.accessMu.Lock()
+			t.worlds = t.worlds[:0]
+			for _, w := range worlds {
+				t.worlds = append(t.worlds, w.Name)
+			}
+			t.accessMu.Unlock()
+		}
 	})
 	wg.Go(func() {
 		var err error
 		online, err = t.client.GetOnlinePlayers(ctx)
-		t.failed("players/online", err)
+		t.done("players/online", err)
 	})
-	wg.Go(func() { t.refreshStats(ctx) })
+	if t.allowed("server/system") {
+		wg.Go(func() {
+			var err error
+			system, err = t.client.GetSystem(ctx)
+			t.done("server/system", err)
+		})
+	}
+	wg.Go(func() { t.refreshSlow(ctx) })
 	wg.Go(func() { t.pollEvents(ctx) })
+	wg.Go(func() { t.pollLogs(ctx) })
 	wg.Wait()
 
 	up := 0.0
@@ -98,17 +128,51 @@ func (s *scrape) Collect(ch chan<- prometheus.Metric) {
 	if online != nil {
 		collectOnline(out, online, t.opts.Players)
 	}
+	if system != nil {
+		collectSystem(out, system)
+	}
 	t.collectStats(out)
+	t.collectPrivate(out)
 	t.collectEvents(out)
+	t.collectLogs(out)
+	t.collectAccess(out)
 	out.gauge("minecraft_exporter_scrape_duration_seconds", "How long reading WorldAPI took", time.Since(start).Seconds())
 }
 
-// failed counts a failed request. A missing permission counts too: the metrics it would give stay away.
-func (t *Target) failed(endpoint string, err error) {
-	if err == nil || errors.Is(err, context.Canceled) {
-		return
+// allowed says whether to call an endpoint: false for a while after WorldAPI refused the token.
+func (t *Target) allowed(endpoint string) bool {
+	t.accessMu.Lock()
+	defer t.accessMu.Unlock()
+	return time.Now().After(t.access[endpoint])
+}
+
+// done records how a request went and says whether it succeeded. A refusal (401, 403) marks the
+// endpoint as closed to this token for a while; anything else that fails counts as an error.
+func (t *Target) done(endpoint string, err error) bool {
+	t.accessMu.Lock()
+	defer t.accessMu.Unlock()
+	var refused *worldapi.Error
+	switch {
+	case err == nil:
+		t.access[endpoint] = time.Time{}
+		return true
+	case errors.As(err, &refused) && (refused.Status == http.StatusUnauthorized || refused.Status == http.StatusForbidden):
+		t.access[endpoint] = time.Now().Add(deniedFor)
+	case errors.Is(err, context.Canceled):
+	default:
+		t.errors.WithLabelValues(t.Name, endpoint).Inc()
 	}
-	t.errors.WithLabelValues(t.Name, endpoint).Inc()
+	return false
+}
+
+func (t *Target) collectAccess(out *emitter) {
+	t.accessMu.Lock()
+	defer t.accessMu.Unlock()
+	for endpoint, until := range t.access {
+		out.gauge("minecraft_exporter_endpoint_allowed",
+			"1 when WorldAPI lets the exporter read an endpoint, 0 when the token lacks its permission", boolValue(until.IsZero()),
+			"endpoint", endpoint)
+	}
 }
 
 // emitter builds constant metrics, so every scrape reports the server as it is now.

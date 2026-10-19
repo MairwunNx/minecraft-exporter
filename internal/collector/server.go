@@ -128,6 +128,12 @@ func collectOnline(out *emitter, online *worldapi.OnlinePlayers, perPlayer bool)
 		out.gauge("minecraft_player_food", "A player's hunger bar, 20 when full", float64(p.Food), "player", p.Name)
 		out.gauge("minecraft_player_level", "A player's experience level", float64(p.Level), "player", p.Name)
 		out.gauge("minecraft_player_idle_seconds", "How long a player hasn't moved or acted", float64(p.IdleSeconds), "player", p.Name)
+		if l := p.Location; l != nil {
+			const help = "Where a player stands, by axis; only for clients that may see coordinates"
+			out.gauge("minecraft_player_position_blocks", help, l.X, "player", p.Name, "world", l.World, "axis", "x")
+			out.gauge("minecraft_player_position_blocks", help, l.Y, "player", p.Name, "world", l.World, "axis", "y")
+			out.gauge("minecraft_player_position_blocks", help, l.Z, "player", p.Name, "world", l.World, "axis", "z")
+		}
 	}
 }
 

@@ -19,6 +19,7 @@
 - 🌍 **Миры:** загруженные чанки, сущности и самые частые их типы, блочные сущности, время суток, номер дня, погода.
 - 🧑‍🤝‍🧑 **Игроки:** кто онлайн, с пингом, здоровьем и уровнем; когда каждый пришёл впервые и когда заходил последний раз; пожизненная статистика из самой игры: время в игре, смерти, убийства, добытые блоки, пройденный путь, алмазы, достижения и другое.
 - 💀 **Активность:** входы, смерти по причинам и убийцам, достижения по рамкам, новые игроки и события, которыми другие плагины делятся через WorldAPI, например убийства боссов.
+- 🔐 **Больше с токеном:** нагрузка, память и диск машины, предупреждения и ошибки консоли с указанием источника, плагины и их версии, что скопилось в каждом мире (вещи на земле, жители, самые загруженные чанки), где стоит каждый игрок и кто сколько пишет в чат.
 - 🛰️ **Много серверов на один экспортер**, как у blackbox exporter.
 
 Экспортер работает рядом с Prometheus, а не внутри игры: при каждом опросе он спрашивает WorldAPI, и серверу это стоит нескольких HTTP-запросов.
@@ -46,7 +47,7 @@ curl -Lo grafana/dashboards/minecraft.json https://github.com/MairwunNx/minecraf
 WORLDAPI_URL=http://your-server:8110/api/v1 WORLDAPI_TOKEN=… docker compose up -d
 ```
 
-Метрикам токен не нужен, а таблицам чата и событий на дашборде нужен токен с `events:read` и `chat:read`.
+Токен необязателен, но без него на дашборде пусты таблицы чата, событий и консоли. Прежде чем его задать, прочитайте раздел «Больше с токеном».
 
 ### Бинарником
 
@@ -113,11 +114,39 @@ scrape_configs:
 | `EXPORTER_TIMEOUT` | `--timeout` | `10s` | Самый долгий допустимый опрос |
 | `EXPORTER_LISTEN` | `--listen` | `:10059` | Где отдавать метрики |
 
-**Токены.** WorldAPI пускает посетителя не чаще 120 запросов в минуту с одного адреса. Экспортер укладывается с запасом, но если с того же адреса WorldAPI читает ещё и нагруженный сайт, дайте экспортеру токен с группой `viewer`. С токеном экспортер считает и сообщения чата, которых посетители не видят.
+## Больше с токеном
+
+Без токена экспортер читает то, что WorldAPI показывает любому посетителю. Токен открывает больше — по одному праву за раз:
+
+| Право | Что добавляет |
+|---|---|
+| `server:read` | Плагины и их версии, и что скопилось в каждом мире: вещи на земле, жители, питомцы, мобы с именами, самые загруженные чанки с воронками |
+| `players:private` | Где стоит каждый игрок онлайн |
+| `chat:read` | Сообщения чата, всего и по игрокам |
+| `system:read` | Машина: нагрузка, память, своп, диск под папкой сервера, лимиты контейнера, открытые файлы, память процесса, Java |
+| `logs:read` | Строки консоли по уровням, предупреждения и ошибки по источникам |
+| `players:moderate` | Баны, операторы и вайтлист. Это право ещё и банит и кикает, так что не давайте его без нужды |
+
+Токен со всем, что читает экспортер, и без права что-либо менять, задаётся в `config.yml` WorldAPI:
+
+```yaml
+auth:
+  tokens:
+    - name: monitoring
+      token: "64 случайных шестнадцатеричных символа, например вывод openssl rand -hex 32"
+      scopes: [viewer, "logs:read", "system:read"]
+```
+
+В группе `viewer` есть `server:read`, `players:read`, `players:private`, `events:read` и `chat:read`. Перезапустите сервер и передайте токен в `WORLDAPI_TOKEN` или `WORLDAPI_TOKEN_FILE`. Метрика `minecraft_exporter_endpoint_allowed` показывает, какие эндпоинты токен открывает; закрытый экспортер переспрашивает раз в 10 минут.
+
+> [!WARNING]
+> **Не выставляйте метрики с токеном наружу.** С токеном экспортер публикует то, что WorldAPI скрывает от посетителей: где стоит каждый игрок, кто сколько пишет в чат, предупреждения консоли, саму машину. Всё это читает любой, кто доберётся до `/metrics`, вашего Prometheus или Grafana с этими метриками. Источник данных Grafana с тем же токеном читает всё, что разрешает токен, включая сообщения чата. Держите экспортер, Prometheus и Grafana за логином или файрволом, никогда на публичном адресе или с анонимным доступом, и давайте токену только права на чтение.
+
+Ещё с токеном действует лимит WorldAPI для токенов — по умолчанию 1200 запросов в минуту вместо 120 у посетителя, — и экспортер обновляет статистику большими партиями.
 
 ## Метрики
 
-Все метрики начинаются с `minecraft_`. Счётчики событий считают с запуска экспортера, как принято у счётчиков Prometheus. Статистика игроков берётся из пожизненных счётчиков самой игры.
+Все метрики начинаются с `minecraft_`. Счётчики событий и консоли считают с запуска экспортера, как принято у счётчиков Prometheus. Статистика игроков берётся из пожизненных счётчиков самой игры. Группам с правом в скобках нужен токен с этим правом.
 
 | Группа | Метрики |
 |---|---|
@@ -128,15 +157,22 @@ scrape_configs:
 | Игроки онлайн | `player_info{uuid,world,gamemode}`, `player_ping_seconds`, `player_health`, `player_food`, `player_level`, `player_idle_seconds` |
 | Статистика игроков | `player_play_time_seconds_total`, `player_deaths_total`, `player_mob_kills_total`, `player_player_kills_total`, `player_damage_dealt_total`, `player_damage_taken_total`, `player_blocks_mined_total`, `player_items_crafted_total`, `player_distance_meters_total`, `player_jumps_total`, `player_fish_caught_total`, `player_animals_bred_total`, `player_animals_tamed_total`, `player_villager_trades_total`, `player_items_enchanted_total`, `player_diamonds_mined_total`, `player_ancient_debris_mined_total`, `player_experience_gained_total`, `player_advancements`, `player_first_join_timestamp_seconds`, `player_last_seen_timestamp_seconds` |
 | Активность | `events_total{type}`, `deaths_total{cause,killer}`, `advancements_total{frame}`, `first_joins_total` |
-| Экспортер | `exporter_scrape_duration_seconds`, `exporter_request_errors_total{target,endpoint}`, `exporter_build_info` |
+| Чат (`chat:read`) | `player_chat_messages_total` и `player.chat` в `events_total` |
+| Координаты (`players:private`) | `player_position_blocks{world,axis}` |
+| Миры (`server:read`) | `world_dropped_items`, `world_dropped_item_count`, `world_villagers`, `world_named_mobs`, `world_tamed_mobs`, `chunk_entities{chunk}`, `chunk_block_entities{chunk}`, `chunk_hoppers{chunk}` для пяти самых загруженных чанков |
+| Плагины (`server:read`) | `plugin_enabled{plugin,version}`, а при [Mo’Bosses](https://modrinth.com/plugin/mobosses) ещё `mobosses_alive`, `mobosses_spawned_total{type,class}`, `mobosses_killed_total{type,class}` |
+| Машина (`system:read`) | `host_load_average{window}`, `host_cpus`, `host_memory_{total,available}_bytes`, `host_swap_{total,free}_bytes`, `disk_{total,free}_bytes`, `container_memory_{limit,used}_bytes`, `container_cpu_limit`, `process_open_files`, `process_max_open_files`, `process_resident_memory_bytes`, `java_info{name,vendor,version}` |
+| Консоль (`logs:read`) | `log_messages_total{level}`, `log_problems_total{level,logger}` |
+| Модерация (`players:moderate`) | `bans{kind}`, `operators`, `whitelist_players` |
+| Экспортер | `exporter_scrape_duration_seconds`, `exporter_request_errors_total{target,endpoint}`, `exporter_endpoint_allowed{endpoint}`, `exporter_build_info` |
 
 ## Grafana
 
 Дашборд [minecraft-grafana](https://github.com/MairwunNx/minecraft-grafana) рисует всё это, а ещё показывает таблицы чата и событий прямо из WorldAPI. Как его импортировать, написано в его README.
 
-## Посмотреть вживую
+## На Moonlands
 
-Moonlands, мой сервер для хардкорного выживания с друзьями, работает с этим экспортером и показывает дашборд всем: [minecraft.mairwunnx.com/grafana](https://minecraft.mairwunnx.com/grafana/d/minecraft-worldapi).
+Moonlands, мой сервер для хардкорного выживания с друзьями, работает с этим экспортером и токеном для мониторинга за закрытой Grafana. Его сайт, [minecraft.mairwunnx.com](https://minecraft.mairwunnx.com), читает тот же WorldAPI.
 
 [![Играйте на Moonlands: чистая ванилла, сложные мобы, ИИ, приваты. minecraft.mairwunnx.com](https://raw.githubusercontent.com/MairwunNx/minecraft-worldapi/master/media/og-adv-image.png)](https://minecraft.mairwunnx.com)
 

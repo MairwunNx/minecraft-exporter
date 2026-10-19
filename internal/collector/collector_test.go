@@ -19,6 +19,7 @@ import (
 type fakeWorldAPI struct {
 	mu        sync.Mutex
 	events    []map[string]any
+	logs      []map[string]any
 	forbidden map[string]bool
 	requests  map[string]int
 }
@@ -26,7 +27,14 @@ type fakeWorldAPI struct {
 func (f *fakeWorldAPI) addEvent(id int64, kind string, data map[string]any) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.events = append(f.events, map[string]any{"id": id, "type": kind, "atMillis": 1_700_000_000_000 + id, "data": data})
+	f.events = append(f.events, map[string]any{"id": id, "type": kind, "atMillis": 1_700_000_000_000 + id, "data": data,
+		"player": map[string]any{"uuid": "u-steve", "name": "Steve"}})
+}
+
+func (f *fakeWorldAPI) addLog(at, level, logger, message string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.logs = append(f.logs, map[string]any{"at": at, "level": level, "logger": logger, "message": message})
 }
 
 func (f *fakeWorldAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +77,30 @@ func (f *fakeWorldAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"weather": map[string]any{"raining": true, "thundering": false}, "border": map[string]any{"size": 60000.0}}
 	case path == "/players/online":
 		body = map[string]any{"count": 1, "max": 20, "players": []map[string]any{{"uuid": "u-steve", "name": "Steve", "world": "world",
-			"gameMode": "survival", "health": 18.5, "food": 20, "level": 7, "ping": 55, "idleSeconds": 3}}}
+			"gameMode": "survival", "health": 18.5, "food": 20, "level": 7, "ping": 55, "idleSeconds": 3,
+			"location": map[string]any{"world": "world", "x": 10.5, "y": 64, "z": -3}}}}
+	case path == "/server/system":
+		body = map[string]any{"cpus": 8, "loadAverage": []float64{1.5, 1, 0.5},
+			"memory":    map[string]any{"totalBytes": 1000, "availableBytes": 400, "swapTotalBytes": nil},
+			"disk":      map[string]any{"path": "/data", "totalBytes": 500, "usableBytes": 200},
+			"container": map[string]any{"memoryLimitBytes": 900, "memoryUsedBytes": 300, "cpuLimit": 4.0},
+			"openFiles": 120, "maxOpenFiles": 1024, "processResidentBytes": 700,
+			"java": map[string]any{"name": "OpenJDK", "vendor": "Eclipse Adoptium", "version": "25.0.1"}}
+	case path == "/server/logs":
+		body = map[string]any{"lines": f.logs}
+	case path == "/server/plugins":
+		body = []map[string]any{{"name": "WorldAPI", "version": "3.2.0", "enabled": true}, {"name": "Broken", "version": "1.0", "enabled": false}}
+	case path == "/server/bans":
+		body = map[string]any{"players": []map[string]any{{"target": "Griefer"}}, "ips": []map[string]any{}}
+	case path == "/server/ops":
+		body = map[string]any{"players": []map[string]any{{"uuid": "u-steve"}}}
+	case path == "/server/whitelist":
+		body = map[string]any{"enabled": false, "players": []map[string]any{}}
+	case path == "/worlds/world/entities/summary":
+		body = map[string]any{"droppedItems": 12, "droppedItemCount": 300, "villagers": 40, "named": 2, "tamed": 5,
+			"topChunks": []map[string]any{{"x": 3, "z": -7, "entities": 90, "tileEntities": 30, "hoppers": 12}}}
+	case path == "/extensions/mobosses/stats":
+		body = map[string]any{"alive": 2, "counts": []map[string]any{{"type": "zombie", "class": "rare", "spawned": 10, "killed": 4}}}
 	case path == "/players":
 		body = map[string]any{"items": []map[string]any{
 			{"uuid": "u-steve", "name": "Steve", "firstPlayed": "2026-10-10T16:48:21Z", "lastSeen": "2026-10-19T15:00:00Z"},
@@ -162,7 +193,7 @@ func scrapeText(t *testing.T, target *Target) string {
 func scrapeFilled(t *testing.T, target *Target) string {
 	t.Helper()
 	text := ""
-	for range (len(statistics) + 1 + statsBatch - 1) / statsBatch {
+	for range 8 {
 		text = scrapeText(t, target)
 	}
 	return text
@@ -269,8 +300,8 @@ func TestStatisticsRefreshInBatches(t *testing.T) {
 			read += n
 		}
 	}
-	if read != statsBatch {
-		t.Errorf("one scrape read %d statistics, want %d", read, statsBatch)
+	if read != slowBatch {
+		t.Errorf("one scrape read %d statistics, want %d", read, slowBatch)
 	}
 }
 
@@ -283,8 +314,13 @@ func TestForbiddenEndpointsLeaveTheRest(t *testing.T) {
 	if strings.Contains(text, "minecraft_events_total") || strings.Contains(text, "minecraft_player_deaths_total") {
 		t.Error("exported metrics of forbidden endpoints")
 	}
-	if n := testutil.ToFloat64(errorsTotal.WithLabelValues("test", "events")); n != 1 {
-		t.Errorf("events errors = %v, want 1", n)
+	if n := testutil.ToFloat64(errorsTotal.WithLabelValues("test", "events")); n != 0 {
+		t.Errorf("a refusal counted as %v errors, want none", n)
+	}
+	expectLines(t, text, "minecraft_exporter_endpoint_allowed{endpoint=events} 0", "minecraft_exporter_endpoint_allowed{endpoint=server} 1")
+	scrapeText(t, target)
+	if n := fake.requests["/events"]; n != 1 {
+		t.Errorf("asked a refused endpoint %d times within %v, want once", n, deniedFor)
 	}
 }
 
@@ -293,4 +329,60 @@ func TestDownServerReportsUpZero(t *testing.T) {
 	client := worldapi.NewClient("http://127.0.0.1:1/api/v1", "", "test", &http.Client{Timeout: time.Second})
 	target := NewTarget("down", client, Options{Players: true, StatsInterval: time.Minute}, errorsTotal)
 	expectLines(t, scrapeText(t, target), "minecraft_up{} 0")
+}
+
+func TestTokenUnlocksPrivateData(t *testing.T) {
+	fake, target, _ := newFixture(t, Options{Players: true, StatsInterval: time.Minute, Token: true})
+	fake.addEvent(1, "player.join", map[string]any{})
+	fake.addLog("2026-10-19T10:00:00Z", "info", "Minecraft", "old line")
+	scrapeFilled(t, target)
+
+	fake.addEvent(2, "player.chat", map[string]any{"message": "hi"})
+	fake.addLog("2026-10-19T10:00:00Z", "warn", "Minecraft", "same millisecond, new line")
+	fake.addLog("2026-10-19T10:00:01Z", "error", "Broken", "boom")
+	fake.addLog("2026-10-19T10:00:01Z", "info", "Minecraft", "done")
+	text := scrapeText(t, target)
+	expectLines(t, text,
+		"minecraft_host_load_average{window=5m} 1",
+		"minecraft_host_memory_available_bytes{} 400",
+		"minecraft_disk_free_bytes{} 200",
+		"minecraft_container_cpu_limit{} 4",
+		"minecraft_process_resident_memory_bytes{} 700",
+		"minecraft_java_info{name=OpenJDK,vendor=Eclipse Adoptium,version=25.0.1} 1",
+		"minecraft_plugin_enabled{plugin=Broken,version=1.0} 0",
+		"minecraft_bans{kind=player} 1",
+		"minecraft_operators{} 1",
+		"minecraft_world_villagers{world=world} 40",
+		"minecraft_world_dropped_item_count{world=world} 300",
+		"minecraft_chunk_hoppers{chunk=3,-7,world=world} 12",
+		"minecraft_mobosses_killed_total{class=rare,type=zombie} 4",
+		"minecraft_player_position_blocks{axis=z,player=Steve,world=world} -3",
+		"minecraft_player_chat_messages_total{player=Steve} 1",
+		"minecraft_log_messages_total{level=warn} 1",
+		"minecraft_log_messages_total{level=info} 1",
+		"minecraft_log_problems_total{level=error,logger=Broken} 1",
+	)
+	if strings.Contains(text, "swap_total") {
+		t.Error("exported a value the host doesn't report")
+	}
+	expectLines(t, scrapeText(t, target), "minecraft_log_messages_total{level=info} 1")
+}
+
+func TestWithoutTokenPrivateDataStaysAway(t *testing.T) {
+	fake, target, errorsTotal := newFixture(t, Options{Players: true, StatsInterval: time.Minute})
+	for _, path := range []string{"/server/system", "/server/logs", "/server/plugins", "/server/bans", "/worlds/world/entities"} {
+		fake.forbidden[path] = true
+	}
+	text := scrapeFilled(t, target)
+	for _, metric := range []string{"minecraft_host_", "minecraft_log_", "minecraft_plugin_", "minecraft_bans", "minecraft_world_villagers"} {
+		if strings.Contains(text, metric) {
+			t.Errorf("exported %s without its permission", metric)
+		}
+	}
+	expectLines(t, text, "minecraft_exporter_endpoint_allowed{endpoint=server/system} 0", "minecraft_mobosses_alive{} 2")
+	for _, endpoint := range []string{"server/system", "server/logs", "server/plugins"} {
+		if n := testutil.ToFloat64(errorsTotal.WithLabelValues("test", endpoint)); n != 0 {
+			t.Errorf("%s: refusals counted as %v errors", endpoint, n)
+		}
+	}
 }

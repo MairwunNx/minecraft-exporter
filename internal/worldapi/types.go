@@ -114,6 +114,13 @@ type OnlinePlayers struct {
 		Level       int     `json:"level"`
 		Ping        int     `json:"ping"`
 		IdleSeconds int64   `json:"idleSeconds"`
+		// Location comes only to clients that may see coordinates.
+		Location *struct {
+			World string  `json:"world"`
+			X     float64 `json:"x"`
+			Y     float64 `json:"y"`
+			Z     float64 `json:"z"`
+		} `json:"location"`
 	} `json:"players"`
 }
 
@@ -157,5 +164,89 @@ type Event struct {
 	ID       int64           `json:"id"`
 	Type     string          `json:"type"`
 	AtMillis int64           `json:"atMillis"`
+	Player   *PlayerRef      `json:"player"`
 	Data     json.RawMessage `json:"data"`
+}
+
+// PlayerRef names a player.
+type PlayerRef struct {
+	UUID string `json:"uuid"`
+	Name string `json:"name"`
+}
+
+// System is GET /server/system; Linux fills in more than other systems, so most fields may be missing.
+type System struct {
+	CPUs        int       `json:"cpus"`
+	LoadAverage []float64 `json:"loadAverage"`
+	Memory      struct {
+		TotalBytes     *int64 `json:"totalBytes"`
+		AvailableBytes *int64 `json:"availableBytes"`
+		SwapTotalBytes *int64 `json:"swapTotalBytes"`
+		SwapFreeBytes  *int64 `json:"swapFreeBytes"`
+	} `json:"memory"`
+	Disk struct {
+		Path        string `json:"path"`
+		TotalBytes  int64  `json:"totalBytes"`
+		UsableBytes int64  `json:"usableBytes"`
+	} `json:"disk"`
+	Container *struct {
+		MemoryLimitBytes *int64   `json:"memoryLimitBytes"`
+		MemoryUsedBytes  *int64   `json:"memoryUsedBytes"`
+		CPULimit         *float64 `json:"cpuLimit"`
+	} `json:"container"`
+	OpenFiles            *int64 `json:"openFiles"`
+	MaxOpenFiles         *int64 `json:"maxOpenFiles"`
+	ProcessResidentBytes *int64 `json:"processResidentBytes"`
+	Java                 struct {
+		Name    string `json:"name"`
+		Vendor  string `json:"vendor"`
+		Version string `json:"version"`
+	} `json:"java"`
+}
+
+// LogLine is one console line.
+type LogLine struct {
+	At      string  `json:"at"`
+	Level   string  `json:"level"`
+	Logger  *string `json:"logger"`
+	Message string  `json:"message"`
+}
+
+// Plugin is one item of GET /server/plugins.
+type Plugin struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	Enabled bool   `json:"enabled"`
+}
+
+// Moderation counts bans, operators, and whitelisted players.
+type Moderation struct {
+	BannedPlayers, BannedAddresses, Operators, Whitelisted int
+}
+
+// EntitySummary is GET /worlds/{world}/entities/summary.
+type EntitySummary struct {
+	DroppedItems     int `json:"droppedItems"`
+	DroppedItemCount int `json:"droppedItemCount"`
+	Villagers        int `json:"villagers"`
+	Named            int `json:"named"`
+	Tamed            int `json:"tamed"`
+	TopChunks        []struct {
+		X            int `json:"x"`
+		Z            int `json:"z"`
+		Entities     int `json:"entities"`
+		TileEntities int `json:"tileEntities"`
+		Hoppers      int `json:"hoppers"`
+	} `json:"topChunks"`
+}
+
+// BossStats is Mo’Bosses' bosses alive, spawned, and killed, in all and by type and class.
+type BossStats struct {
+	Alive  int `json:"alive"`
+	Counts []struct {
+		Type    string `json:"type"`
+		Class   string `json:"class"`
+		Spawned int    `json:"spawned"`
+		Killed  int    `json:"killed"`
+	} `json:"counts"`
 }

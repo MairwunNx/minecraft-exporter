@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+- 🔐 **More with a token.** Each WorldAPI permission opens its own metrics: the host's load, memory, disk, and open files (`system:read`); console lines by level, and warnings and errors by who logged them (`logs:read`); plugins and their versions, and what crowds each world: items on the ground, villagers, pets, named mobs, the five busiest chunks with their hoppers (`server:read`); where each online player stands (`players:private`); chat messages per player (`chat:read`); bans, operators, and the whitelist (`players:moderate`).
+- **Mo’Bosses:** bosses alive, and spawned and killed by type and class, when the plugin shares its data through WorldAPI.
+- **A missing permission is no longer an error.** The exporter leaves an endpoint its token can't read for 10 minutes, and `minecraft_exporter_endpoint_allowed` shows which ones are open; `minecraft_exporter_request_errors_total` counts real failures only.
+- With a token, statistics refresh 12 at a time instead of 6.
+- The README warns to keep the metrics of a token private and shows a read-only token for WorldAPI's config.
+
 ## 1.0.0
 
 The first release: Prometheus metrics of a Paper server through WorldAPI 3.0 or newer.

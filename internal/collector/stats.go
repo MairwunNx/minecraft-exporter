@@ -42,59 +42,74 @@ var statistics = []statistic{
 	{"advancements", "minecraft_player_advancements", "Advancements finished, recipes left out", 1, true},
 }
 
-// statsBatch is how many statistics one scrape refreshes at most. WorldAPI lets an anonymous client
-// burst 30 requests, so the cache refreshes a few boards per scrape instead of all at once.
-const statsBatch = 6
+// slowBatch is how many slow items one scrape refreshes at most. WorldAPI lets an anonymous client
+// burst 30 requests, so the cache refreshes a few items per scrape instead of all at once; a token
+// allows more.
+const (
+	slowBatch      = 6
+	slowBatchToken = 12
+)
 
-// playersKey stands for the player list among the boards in the cache.
-const playersKey = "players"
-
-type statsCache struct {
-	read    map[string]time.Time // when each board, and the player list, was last tried
-	boards  map[string]*worldapi.Leaderboard
-	players []worldapi.PlayerSummary
+// slowItem is data read on the slow cadence: a leaderboard, the player list, or token-only data.
+type slowItem struct {
+	key      string
+	endpoint string // names it in errors and in minecraft_exporter_endpoint_allowed
+	fetch    func(context.Context) (any, error)
 }
 
-// refreshStats reads again the stalest statistics that are older than the interval, a batch at a time.
-// A board that fails keeps its last answer.
-func (t *Target) refreshStats(ctx context.Context) {
-	t.statsMu.Lock()
-	defer t.statsMu.Unlock()
-	if t.stats.read == nil {
-		t.stats.read, t.stats.boards = map[string]time.Time{}, map[string]*worldapi.Leaderboard{}
+type slowCache struct {
+	read   map[string]time.Time // when each item was last tried
+	values map[string]any
+}
+
+const playersKey = "players"
+
+func boardKey(board string) string { return "board:" + board }
+
+// slowItems lists everything read on the slow cadence: statistics for everyone, then what a token unlocks.
+func (t *Target) slowItems() []slowItem {
+	items := []slowItem{{playersKey, "players", func(ctx context.Context) (any, error) { return t.client.GetPlayers(ctx) }}}
+	for _, s := range statistics {
+		items = append(items, slowItem{boardKey(s.board), "leaderboards", func(ctx context.Context) (any, error) {
+			return t.client.GetLeaderboard(ctx, s.board)
+		}})
+	}
+	return append(items, t.privateItems()...)
+}
+
+// refreshSlow reads again the stalest items that are older than the interval, a batch at a time.
+// An item that fails keeps its last answer; one the token may not read waits until it's allowed.
+func (t *Target) refreshSlow(ctx context.Context) {
+	t.slowMu.Lock()
+	defer t.slowMu.Unlock()
+	if t.slow.read == nil {
+		t.slow.read, t.slow.values = map[string]time.Time{}, map[string]any{}
 	}
 
-	due := []string{}
-	for _, key := range append([]string{playersKey}, boardNames()...) {
-		if time.Since(t.stats.read[key]) >= t.opts.StatsInterval {
-			due = append(due, key)
+	due := []slowItem{}
+	for _, item := range t.slowItems() {
+		if time.Since(t.slow.read[item.key]) >= t.opts.StatsInterval && t.allowed(item.endpoint) {
+			due = append(due, item)
 		}
 	}
-	slices.SortStableFunc(due, func(a, b string) int { return t.stats.read[a].Compare(t.stats.read[b]) })
-	due = due[:min(len(due), statsBatch)]
+	slices.SortStableFunc(due, func(a, b slowItem) int { return t.slow.read[a.key].Compare(t.slow.read[b.key]) })
+	batch := slowBatch
+	if t.opts.Token {
+		batch = slowBatchToken
+	}
+	due = due[:min(len(due), batch)]
 
 	var (
 		wg sync.WaitGroup
 		mu sync.Mutex
 	)
-	for _, key := range due {
-		t.stats.read[key] = time.Now()
+	for _, item := range due {
+		t.slow.read[item.key] = time.Now()
 		wg.Go(func() {
-			if key == playersKey {
-				players, err := t.client.GetPlayers(ctx)
-				t.failed("players", err)
-				if err == nil {
-					mu.Lock()
-					t.stats.players = players
-					mu.Unlock()
-				}
-				return
-			}
-			board, err := t.client.GetLeaderboard(ctx, key)
-			t.failed("leaderboards", err)
-			if err == nil {
+			value, err := item.fetch(ctx)
+			if t.done(item.endpoint, err) {
 				mu.Lock()
-				t.stats.boards[key] = board
+				t.slow.values[item.key] = value
 				mu.Unlock()
 			}
 		})
@@ -102,20 +117,12 @@ func (t *Target) refreshStats(ctx context.Context) {
 	wg.Wait()
 }
 
-func boardNames() []string {
-	names := make([]string, len(statistics))
-	for i, s := range statistics {
-		names[i] = s.board
-	}
-	return names
-}
-
 func (t *Target) collectStats(out *emitter) {
-	t.statsMu.Lock()
-	defer t.statsMu.Unlock()
+	t.slowMu.Lock()
+	defer t.slowMu.Unlock()
 
 	for _, s := range statistics {
-		board := t.stats.boards[s.board]
+		board, _ := t.slow.values[boardKey(s.board)].(*worldapi.Leaderboard)
 		if board == nil {
 			continue
 		}
@@ -136,14 +143,15 @@ func (t *Target) collectStats(out *emitter) {
 		}
 	}
 
-	if t.stats.players == nil {
+	players, ok := t.slow.values[playersKey].([]worldapi.PlayerSummary)
+	if !ok {
 		return
 	}
-	out.gauge("minecraft_players_known", "Players who have ever joined", float64(len(t.stats.players)))
+	out.gauge("minecraft_players_known", "Players who have ever joined", float64(len(players)))
 	if !t.opts.Players {
 		return
 	}
-	for _, p := range t.stats.players {
+	for _, p := range players {
 		if at, ok := parseTime(p.FirstPlayed); ok {
 			out.gauge("minecraft_player_first_join_timestamp_seconds", "When a player first joined, in Unix seconds", at, "player", p.Name)
 		}
