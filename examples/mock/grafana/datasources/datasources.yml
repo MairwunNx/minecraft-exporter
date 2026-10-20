@@ -1,0 +1,15 @@
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    # The made-up day has a sample every 30 seconds.
+    jsonData: { timeInterval: 30s }
+  - name: WorldAPI
+    uid: worldapi
+    type: yesoreyeram-infinity-datasource
+    url: http://worldapi:8110/api/v1
+    jsonData: { allowedHosts: ["http://worldapi:8110/api/v1"] }

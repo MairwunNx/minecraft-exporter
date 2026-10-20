@@ -1,0 +1,55 @@
+# A made-up day of a busy server for the dashboard's screenshots: no Minecraft, no exporter.
+# generate.py simulates the day and writes its metrics, events, and console lines; promtool loads
+# the metrics into Prometheus, and fake_worldapi.py serves the rest to Grafana's Infinity tables.
+# Copy the dashboard to ../grafana/dashboards/, run `docker compose up -d`, and open
+# http://localhost:3300 for the last 24 hours. `docker compose down -v` throws the day away.
+services:
+  generate:
+    image: python:3.14-alpine
+    command: [python3, -I, /app/generate.py]
+    environment: { MOCK_OUT: /data }
+    volumes: [./:/app:ro, data:/data]
+
+  backfill:
+    image: prom/prometheus:v3.15.0
+    user: "0"
+    depends_on: { generate: { condition: service_completed_successfully } }
+    entrypoint: [sh, -c, "[ -d /prometheus/wal ] || promtool tsdb create-blocks-from openmetrics /data/metrics.om /prometheus"]
+    volumes: [data:/data, prometheus:/prometheus]
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    user: "0"
+    depends_on: { backfill: { condition: service_completed_successfully } }
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=30d]
+    configs: [{ source: prometheus, target: /etc/prometheus/prometheus.yml }]
+    volumes: [prometheus:/prometheus]
+
+  worldapi:
+    image: python:3.14-alpine
+    depends_on: { generate: { condition: service_completed_successfully } }
+    command: [python3, -I, /app/fake_worldapi.py]
+    environment: { MOCK_OUT: /data }
+    volumes: [./:/app:ro, data:/data]
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    depends_on: [prometheus, worldapi]
+    ports: ["3300:3000"]
+    environment:
+      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../grafana/dashboards:/etc/grafana/dashboards:ro
+
+configs:
+  prometheus:
+    content: |
+      global: { scrape_interval: 30s }
+
+volumes:
+  data:
+  prometheus:

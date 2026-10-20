@@ -1,0 +1,4 @@
+# What generate.py writes when run by hand.
+metrics.om
+events.json
+logs.json
