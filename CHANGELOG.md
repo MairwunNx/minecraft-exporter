@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0
+
+- **Mo’Bosses is gone.** `minecraft_mobosses_alive`, `minecraft_mobosses_spawned_total`, and `minecraft_mobosses_killed_total` no longer exist, and the exporter no longer reads `/extensions/mobosses/stats`. A plugin's events still count in `minecraft_events_total`, like any other plugin's.
+- `examples/mock/` fakes a day of a busy server, with no Minecraft and no exporter, for the dashboard's screenshots.
+
 ## 1.1.0
 
 - 🔐 **More with a token.** Each WorldAPI permission opens its own metrics: the host's load, memory, disk, and open files (`system:read`); console lines by level, and warnings and errors by who logged them (`logs:read`); plugins and their versions, and what crowds each world: items on the ground, villagers, pets, named mobs, the five busiest chunks with their hoppers (`server:read`); where each online player stands (`players:private`); chat messages per player (`chat:read`); bans, operators, and the whitelist (`players:moderate`).

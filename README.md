@@ -6,14 +6,16 @@
 
 [Русская версия](README.RU.md)
 
-![The Minecraft dashboard in Grafana](media/dashboard.png)
+![The Minecraft dashboard in Grafana: server, performance, and host](https://raw.githubusercontent.com/MairwunNx/minecraft-grafana/master/media/overview.png)
+
+![Players on the dashboard: who's online and every player's statistics](https://raw.githubusercontent.com/MairwunNx/minecraft-grafana/master/media/players.png)
 
 ## What you get
 
 - ⏱️ **Performance:** TPS over one, five, and fifteen minutes, tick times by percentile, CPU, the Java heap, garbage collection, threads.
 - 🌍 **Worlds:** loaded chunks, entities and the most common types, block entities, time of day, the day count, weather.
 - 🧑‍🤝‍🧑 **Players:** who's online with ping, health, and level, when each player joined and was last seen, and lifetime statistics from the game itself: play time, deaths, kills, blocks mined, distance, diamonds, advancements, and more.
-- 💀 **Activity:** joins, deaths by cause and killer, advancements by frame, first-time players, and events other plugins share through WorldAPI, like boss kills.
+- 💀 **Activity:** joins, deaths by cause and killer, advancements by frame, first-time players, and events other plugins share through WorldAPI.
 - 🔐 **More with a token:** the host's load, memory, and disk, the console's warnings and errors, plugins and their versions, what crowds each world, where each player stands, and who chats how much.
 - 🛰️ **Many servers from one exporter**, the way the blackbox exporter does it.
 - 🪶 **Light on the server:** it runs next to Prometheus, not inside the game, and costs a few HTTP requests per scrape.
