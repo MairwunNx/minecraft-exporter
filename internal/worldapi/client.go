@@ -191,12 +191,6 @@ func (c *Client) GetEntitySummary(ctx context.Context, world string) (*EntitySum
 	return &out, c.Get(ctx, "/worlds/"+url.PathEscape(world)+"/entities/summary", nil, &out)
 }
 
-// GetBossStats reads Mo’Bosses' GET /extensions/mobosses/stats.
-func (c *Client) GetBossStats(ctx context.Context) (*BossStats, error) {
-	var out BossStats
-	return &out, c.Get(ctx, "/extensions/mobosses/stats", nil, &out)
-}
-
 // GetExtensions reads GET /extensions: the plugins that share data through WorldAPI.
 func (c *Client) GetExtensions(ctx context.Context) ([]Extension, error) {
 	var out []Extension

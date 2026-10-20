@@ -18,7 +18,7 @@ A Prometheus exporter that reads a Minecraft server through WorldAPI (MairwunNx/
 | `internal/collector/server.go` | Server, performance, JVM, worlds, online players |
 | `internal/collector/stats.go` | Player statistics from leaderboards, cached and refreshed a batch per scrape |
 | `internal/collector/events.go` | Counters fed by `GET /events`, counted from the exporter's start |
-| `internal/collector/private.go` | What a token opens: the host, the console, plugins, moderation, Mo’Bosses, what crowds each world |
+| `internal/collector/private.go` | What a token opens: the host, the console, plugins, moderation, what crowds each world |
 
 ## Rules that keep it working
 
@@ -36,6 +36,7 @@ A Prometheus exporter that reads a Minecraft server through WorldAPI (MairwunNx/
 1. `gofmt -l .` prints nothing, `go vet ./...` and `go test -race ./...` pass. Tests use a fake WorldAPI and never touch the network.
 2. Against Moonlands' WorldAPI, read-only: `WORLDAPI_URL=https://minecraft.mairwunnx.com/worldapi/api/v1 EXPORTER_LISTEN=127.0.0.1:10059 go run .`, then `curl -s 127.0.0.1:10059/metrics` twice, 15 seconds apart. Every group from the wiki's “Metrics” page shows up, and `minecraft_exporter_request_errors_total` stays absent.
 3. A change to what the dashboard shows: run `examples/` with the image built locally (`docker build -t minecraft-exporter:test .`) and look at the dashboard, as minecraft-grafana's CLAUDE.md says.
+4. A new metric the dashboard draws: add it to `examples/mock/generate.py` too, which fakes a day of a busy server for the dashboard's screenshots.
 
 ## Autopilot
 
@@ -47,7 +48,7 @@ Where the versions live, for `/update-deps` and `/update-minecraft` (both in `.c
 
 - Go: `toolchain` in `go.mod` and the `golang` image in `Dockerfile`, the same version. The `go` line stays at the oldest Go the code needs.
 - Modules: `go.mod` and `go.sum`.
-- Images: `Dockerfile` (`golang`, `gcr.io/distroless/static-debian13:nonroot`), and Prometheus and Grafana in `examples/compose.yaml`, matched to Moonlands' `compose.yaml`.
+- Images: `Dockerfile` (`golang`, `gcr.io/distroless/static-debian13:nonroot`), and Prometheus and Grafana in `examples/compose.yaml` and `examples/mock/compose.yaml` (with `python`), matched to Moonlands' `compose.yaml`.
 - GitHub Actions in `.github/workflows/`.
 
 ## Docs and releases

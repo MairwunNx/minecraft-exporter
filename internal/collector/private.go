@@ -25,22 +25,14 @@ func (t *Target) privateItems() []slowItem {
 		{"moderation", "server/bans", func(ctx context.Context) (any, error) { return t.client.GetModeration(ctx) }},
 	}
 	t.accessMu.Lock()
-	worlds, bosses := slices.Clone(t.worlds), t.hasExtension("mobosses")
+	worlds := slices.Clone(t.worlds)
 	t.accessMu.Unlock()
-	if bosses {
-		items = append(items, slowItem{"mobosses", "extensions/mobosses/stats", func(ctx context.Context) (any, error) { return t.client.GetBossStats(ctx) }})
-	}
 	for _, world := range worlds {
 		items = append(items, slowItem{"summary:" + world, "worlds/entities/summary", func(ctx context.Context) (any, error) {
 			return t.client.GetEntitySummary(ctx, world)
 		}})
 	}
 	return items
-}
-
-// hasExtension says whether a plugin shares the namespace through WorldAPI; call it under accessMu.
-func (t *Target) hasExtension(namespace string) bool {
-	return slices.Contains(t.namespaces, namespace)
 }
 
 func (t *Target) collectPrivate(out *emitter) {
@@ -58,13 +50,6 @@ func (t *Target) collectPrivate(out *emitter) {
 		out.gauge("minecraft_bans", "Bans in force, of players or of IP addresses", float64(m.BannedAddresses), "kind", "ip")
 		out.gauge("minecraft_operators", "Operators", float64(m.Operators))
 		out.gauge("minecraft_whitelist_players", "Players on the whitelist", float64(m.Whitelisted))
-	}
-	if b, ok := t.slow.values["mobosses"].(*worldapi.BossStats); ok {
-		out.gauge("minecraft_mobosses_alive", "Mo’Bosses bosses alive now", float64(b.Alive))
-		for _, c := range b.Counts {
-			out.counter("minecraft_mobosses_spawned_total", "Mo’Bosses bosses spawned, by type and class", float64(c.Spawned), "type", c.Type, "class", c.Class)
-			out.counter("minecraft_mobosses_killed_total", "Mo’Bosses bosses killed, by type and class", float64(c.Killed), "type", c.Type, "class", c.Class)
-		}
 	}
 	for key, value := range t.slow.values {
 		world, ok := strings.CutPrefix(key, "summary:")

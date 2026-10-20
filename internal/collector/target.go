@@ -42,10 +42,9 @@ type Target struct {
 	logsMu sync.Mutex
 	logs   logCounts
 
-	accessMu   sync.Mutex
-	access     map[string]time.Time // endpoint → denied until; zero when allowed
-	worlds     []string             // the worlds the last scrape saw, for per-world slow data
-	namespaces []string             // plugins sharing data through WorldAPI
+	accessMu sync.Mutex
+	access   map[string]time.Time // endpoint → denied until; zero when allowed
+	worlds   []string             // the worlds the last scrape saw, for per-world slow data
 }
 
 func NewTarget(name string, client *worldapi.Client, opts Options, errors *prometheus.CounterVec) *Target {

@@ -63,11 +63,6 @@ func (t *Target) pollEvents(ctx context.Context) {
 		e.started = true
 		extensions, err := t.client.GetExtensions(ctx)
 		t.done("extensions", err)
-		t.accessMu.Lock()
-		for _, extension := range extensions {
-			t.namespaces = append(t.namespaces, extension.Namespace)
-		}
-		t.accessMu.Unlock()
 		for _, extension := range extensions {
 			for _, topic := range extension.Topics {
 				if _, seen := e.byType[topic.Topic]; topic.Recorded && !seen {

@@ -99,8 +99,6 @@ func (f *fakeWorldAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case path == "/worlds/world/entities/summary":
 		body = map[string]any{"droppedItems": 12, "droppedItemCount": 300, "villagers": 40, "named": 2, "tamed": 5,
 			"topChunks": []map[string]any{{"x": 3, "z": -7, "entities": 90, "tileEntities": 30, "hoppers": 12}}}
-	case path == "/extensions/mobosses/stats":
-		body = map[string]any{"alive": 2, "counts": []map[string]any{{"type": "zombie", "class": "rare", "spawned": 10, "killed": 4}}}
 	case path == "/players":
 		body = map[string]any{"items": []map[string]any{
 			{"uuid": "u-steve", "name": "Steve", "firstPlayed": "2026-10-10T16:48:21Z", "lastSeen": "2026-10-19T15:00:00Z"},
@@ -113,8 +111,8 @@ func (f *fakeWorldAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(path, "/leaderboards/"):
 		body = board(map[string]float64{"Steve": 3, "Alex": 2})
 	case path == "/extensions":
-		body = []map[string]any{{"namespace": "mobosses", "topics": []map[string]any{
-			{"topic": "ext.mobosses.boss.killed", "recorded": true}, {"topic": "ext.mobosses.boss.phase_two", "recorded": false}}}}
+		body = []map[string]any{{"namespace": "quests", "topics": []map[string]any{
+			{"topic": "ext.quests.quest.completed", "recorded": true}, {"topic": "ext.quests.quest.started", "recorded": false}}}}
 	case path == "/events":
 		body = f.eventPage(r)
 	default:
@@ -260,7 +258,7 @@ func TestEventsCountFromTheExportersStart(t *testing.T) {
 
 	first := scrapeText(t, target)
 	expectLines(t, first, "minecraft_events_total{type=player.death} 0", "minecraft_first_joins_total{} 0",
-		"minecraft_events_total{type=ext.mobosses.boss.killed} 0", "minecraft_advancements_total{frame=goal} 0")
+		"minecraft_events_total{type=ext.quests.quest.completed} 0", "minecraft_advancements_total{frame=goal} 0")
 	if strings.Contains(first, "phase_two") {
 		t.Error("seeded an event the plugin doesn't record")
 	}
@@ -268,11 +266,11 @@ func TestEventsCountFromTheExportersStart(t *testing.T) {
 	fake.addEvent(2, "player.death", map[string]any{"cause": "minecraft:mob_attack", "killer": map[string]any{"type": "minecraft:zombie"}})
 	fake.addEvent(3, "player.advancement", map[string]any{"frame": "challenge"})
 	fake.addEvent(4, "player.join", map[string]any{"firstJoin": true})
-	fake.addEvent(5, "ext.mobosses.boss.killed", map[string]any{})
+	fake.addEvent(5, "ext.quests.quest.completed", map[string]any{})
 	second := scrapeText(t, target)
 	expectLines(t, second,
 		"minecraft_events_total{type=player.death} 1",
-		"minecraft_events_total{type=ext.mobosses.boss.killed} 1",
+		"minecraft_events_total{type=ext.quests.quest.completed} 1",
 		"minecraft_deaths_total{cause=minecraft:mob_attack,killer=minecraft:zombie} 1",
 		"minecraft_advancements_total{frame=challenge} 1",
 		"minecraft_first_joins_total{} 1",
@@ -355,7 +353,6 @@ func TestTokenUnlocksPrivateData(t *testing.T) {
 		"minecraft_world_villagers{world=world} 40",
 		"minecraft_world_dropped_item_count{world=world} 300",
 		"minecraft_chunk_hoppers{chunk=3,-7,world=world} 12",
-		"minecraft_mobosses_killed_total{class=rare,type=zombie} 4",
 		"minecraft_player_position_blocks{axis=z,player=Steve,world=world} -3",
 		"minecraft_player_chat_messages_total{player=Steve} 1",
 		"minecraft_log_messages_total{level=warn} 1",
@@ -379,7 +376,7 @@ func TestWithoutTokenPrivateDataStaysAway(t *testing.T) {
 			t.Errorf("exported %s without its permission", metric)
 		}
 	}
-	expectLines(t, text, "minecraft_exporter_endpoint_allowed{endpoint=server/system} 0", "minecraft_mobosses_alive{} 2")
+	expectLines(t, text, "minecraft_exporter_endpoint_allowed{endpoint=server/system} 0")
 	for _, endpoint := range []string{"server/system", "server/logs", "server/plugins"} {
 		if n := testutil.ToFloat64(errorsTotal.WithLabelValues("test", endpoint)); n != 0 {
 			t.Errorf("%s: refusals counted as %v errors", endpoint, n)

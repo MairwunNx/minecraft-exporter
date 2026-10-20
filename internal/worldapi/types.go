@@ -239,14 +239,3 @@ type EntitySummary struct {
 		Hoppers      int `json:"hoppers"`
 	} `json:"topChunks"`
 }
-
-// BossStats is Mo’Bosses' bosses alive, spawned, and killed, in all and by type and class.
-type BossStats struct {
-	Alive  int `json:"alive"`
-	Counts []struct {
-		Type    string `json:"type"`
-		Class   string `json:"class"`
-		Spawned int    `json:"spawned"`
-		Killed  int    `json:"killed"`
-	} `json:"counts"`
-}
