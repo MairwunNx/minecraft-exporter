@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0
+
+- 💥 **Breaking: `minecraft_world_days_total` is now `minecraft_world_days`, a gauge.** The day count is no counter: `/time set` can move it back, and `rate()` or `increase()` over it made no sense. Change your queries and alerts to the new name; minecraft-grafana 1.4.0 already uses it.
+
 ## 2.0.1
 
 Checked against WorldAPI 4.0.0: every endpoint the exporter reads still answers the same, and it never used the bridge that 4.0 removed.
