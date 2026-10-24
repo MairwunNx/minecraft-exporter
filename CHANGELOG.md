@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.1
+
+Checked against WorldAPI 4.0.0: every endpoint the exporter reads still answers the same, and it never used the bridge that 4.0 removed.
+
+- **Old numbers no longer linger.** Plugins, statistics, the player list, and what crowds each world keep their last answer for five `EXPORTER_STATS_INTERVAL`s or 10 minutes, whichever is longer, while WorldAPI can't give a new one; then their metrics drop. A world that unloads takes its metrics away at the next scrape.
+- `minecraft_exporter_request_errors_total` says in its help that a refusal doesn't count, as it hasn't since 1.1.0.
+- The start-up log hides a password in `WORLDAPI_URL`.
+- CI checks for known vulnerabilities with `govulncheck`. Go 1.27.3, newer Prometheus modules.
+
 ## 2.0.0
 
 - **Mo’Bosses is gone.** `minecraft_mobosses_alive`, `minecraft_mobosses_spawned_total`, and `minecraft_mobosses_killed_total` no longer exist, and the exporter no longer reads `/extensions/mobosses/stats`. A plugin's events still count in `minecraft_events_total`, like any other plugin's.
