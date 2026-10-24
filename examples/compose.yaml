@@ -26,7 +26,7 @@ services:
     environment:
       # Infinity reads chat and events straight from WorldAPI for the tables at the bottom;
       # they need WORLDAPI_TOKEN with events:read and chat:read.
-      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource
+      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource@4.1.2
       WORLDAPI_URL: ${WORLDAPI_URL:-http://host.docker.internal:8110/api/v1}
       WORLDAPI_TOKEN: ${WORLDAPI_TOKEN:-}
     extra_hosts: ["host.docker.internal:host-gateway"]

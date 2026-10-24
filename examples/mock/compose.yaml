@@ -37,7 +37,7 @@ services:
     depends_on: [prometheus, worldapi]
     ports: ["3300:3000"]
     environment:
-      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource
+      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource@4.1.2
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
