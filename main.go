@@ -63,7 +63,7 @@ func run() error {
 
 	errorsTotal := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "minecraft_exporter_request_errors_total",
-		Help: "WorldAPI requests that failed, by target and endpoint; a missing permission counts too",
+		Help: "WorldAPI requests that failed, by target and endpoint; a missing permission doesn't count",
 	}, []string{"target", "endpoint"})
 	own := prometheus.NewRegistry()
 	own.MustRegister(
