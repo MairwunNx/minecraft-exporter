@@ -226,7 +226,7 @@ func TestScrapeReadsTheServer(t *testing.T) {
 		"minecraft_jvm_memory_max_bytes{area=heap} 400",
 		"minecraft_jvm_gc_seconds_total{gc=G1 Young Generation} 0.647",
 		"minecraft_world_entities_by_type{type=minecraft:zombie,world=world} 28",
-		"minecraft_world_days_total{world=world} 718",
+		"minecraft_world_days{world=world} 718",
 		"minecraft_world_raining{world=world} 1",
 		"minecraft_player_ping_seconds{player=Steve} 0.055",
 		"minecraft_player_info{gamemode=survival,player=Steve,uuid=u-steve,world=world} 1",

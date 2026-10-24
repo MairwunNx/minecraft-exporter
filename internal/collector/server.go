@@ -108,7 +108,7 @@ func memory(out *emitter, area string, m worldapi.Memory) {
 func collectWorlds(out *emitter, worlds []worldapi.World) {
 	for _, w := range worlds {
 		out.gauge("minecraft_world_info", "A world and its environment: normal, nether, or the_end", 1, "world", w.Name, "environment", w.Environment)
-		out.counter("minecraft_world_days_total", "Days the world has lived", float64(w.Time.Day), "world", w.Name)
+		out.gauge("minecraft_world_days", "Days the world has lived; /time set can move it back", float64(w.Time.Day), "world", w.Name)
 		out.gauge("minecraft_world_time_ticks", "Time of day, from 0 at sunrise to 23999", float64(w.Time.DayTime), "world", w.Name)
 		out.gauge("minecraft_world_raining", "1 while it rains or snows", boolValue(w.Weather.Raining), "world", w.Name)
 		out.gauge("minecraft_world_thundering", "1 during a thunderstorm", boolValue(w.Weather.Thundering), "world", w.Name)

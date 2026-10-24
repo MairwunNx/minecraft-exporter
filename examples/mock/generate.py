@@ -318,7 +318,7 @@ for t in range(START, END + 1, STEP):
         put(t, "minecraft_world_entities", ents, world=w)
         put(t, "minecraft_world_block_entities", int(chunks * 0.62) + (90 if w == "world" else 0), world=w)
         put(t, "minecraft_world_players", in_world[w], world=w)
-        put(t, "minecraft_world_days_total", day, world=w)
+        put(t, "minecraft_world_days", day, world=w)
         put(t, "minecraft_world_time_ticks", world_time, world=w)
         put(t, "minecraft_world_raining", raining if w == "world" else 0, world=w)
         put(t, "minecraft_world_thundering", thundering if w == "world" else 0, world=w)
