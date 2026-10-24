@@ -49,7 +49,8 @@ Where the versions live, for `/update-deps` and `/update-minecraft` (both in `.c
 - Go: `toolchain` in `go.mod` and the `golang` image in `Dockerfile`, the same version. The `go` line stays at the oldest Go the code needs.
 - Modules: `go.mod` and `go.sum`.
 - Images: `Dockerfile` (`golang`, `gcr.io/distroless/static-debian13:nonroot`), and Prometheus and Grafana in `examples/compose.yaml` and `examples/mock/compose.yaml` (with `python`), matched to Moonlands' `compose.yaml`.
-- GitHub Actions in `.github/workflows/`.
+- Grafana's Infinity plugin in `GF_PLUGINS_PREINSTALL_SYNC` of both example compose files, matched to the platform's in MairwunNx/infrastructure.
+- GitHub Actions in `.github/workflows/`, and `govulncheck` in `ci.yml`.
 
 ## Docs and releases
 
