@@ -383,3 +383,43 @@ func TestWithoutTokenPrivateDataStaysAway(t *testing.T) {
 		}
 	}
 }
+
+func TestStaleSlowDataDrops(t *testing.T) {
+	fake, target, _ := newFixture(t, Options{Players: true, StatsInterval: time.Minute, Token: true})
+	text := scrapeFilled(t, target)
+	expectLines(t, text, "minecraft_plugin_enabled{plugin=WorldAPI,version=3.2.0} 1", "minecraft_world_villagers{world=world} 40")
+
+	// WorldAPI stops answering the slow endpoints; their answers go once they're older than staleAfter.
+	fake.mu.Lock()
+	fake.forbidden["/server/plugins"] = true
+	fake.forbidden["/players"] = true
+	fake.mu.Unlock()
+	target.slowMu.Lock()
+	for key := range target.slow.ok {
+		target.slow.ok[key] = time.Now().Add(-target.staleAfter() - time.Second)
+		target.slow.read[key] = time.Time{}
+	}
+	target.slowMu.Unlock()
+	text = scrapeText(t, target)
+	for _, metric := range []string{"minecraft_plugin_enabled", "minecraft_players_known"} {
+		if strings.Contains(text, metric) {
+			t.Errorf("still exports %s from a stale answer", metric)
+		}
+	}
+}
+
+func TestGoneWorldDropsItsSummary(t *testing.T) {
+	_, target, _ := newFixture(t, Options{Players: true, StatsInterval: time.Minute, Token: true})
+	expectLines(t, scrapeFilled(t, target), "minecraft_world_villagers{world=world} 40")
+
+	target.accessMu.Lock()
+	target.worlds = []string{}
+	target.accessMu.Unlock()
+	target.refreshSlow(context.Background())
+	target.slowMu.Lock()
+	_, kept := target.slow.values["summary:world"]
+	target.slowMu.Unlock()
+	if kept {
+		t.Error("kept the summary of a world that left")
+	}
+}

@@ -59,7 +59,15 @@ type slowItem struct {
 
 type slowCache struct {
 	read   map[string]time.Time // when each item was last tried
+	ok     map[string]time.Time // when each item last succeeded
 	values map[string]any
+}
+
+// staleAfter is how long a slow item keeps its last answer while WorldAPI can't give a new one: long
+// enough to ride out a few failed requests, short enough that a gone world or a revoked permission
+// takes its metrics away instead of repeating old numbers.
+func (t *Target) staleAfter() time.Duration {
+	return max(5*t.opts.StatsInterval, 10*time.Minute)
 }
 
 const playersKey = "players"
@@ -78,16 +86,34 @@ func (t *Target) slowItems() []slowItem {
 }
 
 // refreshSlow reads again the stalest items that are older than the interval, a batch at a time.
-// An item that fails keeps its last answer; one the token may not read waits until it's allowed.
+// An item that fails keeps its last answer until staleAfter; one the token may not read waits until
+// it's allowed. Items that left the list, like a world that unloaded, drop at once.
 func (t *Target) refreshSlow(ctx context.Context) {
 	t.slowMu.Lock()
 	defer t.slowMu.Unlock()
 	if t.slow.read == nil {
-		t.slow.read, t.slow.values = map[string]time.Time{}, map[string]any{}
+		t.slow.read, t.slow.ok, t.slow.values = map[string]time.Time{}, map[string]time.Time{}, map[string]any{}
+	}
+
+	items := t.slowItems()
+	listed := make(map[string]bool, len(items))
+	for _, item := range items {
+		listed[item.key] = true
+	}
+	for key := range t.slow.read {
+		if !listed[key] {
+			delete(t.slow.read, key)
+		}
+	}
+	for key := range t.slow.values {
+		if !listed[key] || time.Since(t.slow.ok[key]) > t.staleAfter() {
+			delete(t.slow.values, key)
+			delete(t.slow.ok, key)
+		}
 	}
 
 	due := []slowItem{}
-	for _, item := range t.slowItems() {
+	for _, item := range items {
 		if time.Since(t.slow.read[item.key]) >= t.opts.StatsInterval && t.allowed(item.endpoint) {
 			due = append(due, item)
 		}
@@ -109,7 +135,7 @@ func (t *Target) refreshSlow(ctx context.Context) {
 			value, err := item.fetch(ctx)
 			if t.done(item.endpoint, err) {
 				mu.Lock()
-				t.slow.values[item.key] = value
+				t.slow.values[item.key], t.slow.ok[item.key] = value, time.Now()
 				mu.Unlock()
 			}
 		})
