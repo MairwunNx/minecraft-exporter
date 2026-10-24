@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"runtime"
@@ -158,7 +159,7 @@ func run() error {
 		_ = server.Shutdown(shutdown)
 	}()
 
-	slog.Info("minecraft-exporter "+version+" listening", "address", *listen, "worldapi", *worldapiURL, "targets", len(probes), "players", *players)
+	slog.Info("minecraft-exporter "+version+" listening", "address", *listen, "worldapi", redacted(*worldapiURL), "targets", len(probes), "players", *players)
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
@@ -173,6 +174,14 @@ func scrapeBudget(r *http.Request, limit time.Duration) time.Duration {
 		}
 	}
 	return limit
+}
+
+// redacted hides a password in the URL's user info, so the log never shows one.
+func redacted(raw string) string {
+	if u, err := url.Parse(raw); err == nil {
+		return u.Redacted()
+	}
+	return ""
 }
 
 func env(name, fallback string) string {
