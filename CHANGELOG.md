@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.1.0
+
+WorldAPI 4.2.0 runs on Fabric and NeoForge, and in singleplayer worlds. The exporter tells them apart; no metric changes its name.
+
+- 🧭 **Where it runs.** `minecraft_info` gains `platform` (`paper`, `fabric`, or `neoforge`) and `side` (`dedicated`, or `integrated` for a singleplayer world). An older WorldAPI reads as `paper` and `dedicated`.
+- 🧩 **Plugins or mods.** `minecraft_plugin_enabled` gains `kind`: `plugin` on Paper, `mod` on Fabric and NeoForge.
+- ⏸️ **`minecraft_paused`** is 1 while a singleplayer game sits paused and nothing ticks.
+- 🎮 **A preset for singleplayer.** `examples/singleplayer/compose.yaml` runs Prometheus and Grafana with the dashboard for the world you play, with the exporter beside the game, since a singleplayer world listens on this computer only.
+
 ## 3.0.0
 
 - 💥 **Breaking: `minecraft_world_days_total` is now `minecraft_world_days`, a gauge.** The day count is no counter: `/time set` can move it back, and `rate()` or `increase()` over it made no sense. Change your queries and alerts to the new name; minecraft-grafana 1.4.0 already uses it.
