@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/mairwunnx/minecraft-exporter/internal/worldapi"
@@ -45,6 +46,7 @@ type Target struct {
 	accessMu sync.Mutex
 	access   map[string]time.Time // endpoint → denied until; zero when allowed
 	worlds   []string             // the worlds the last scrape saw, for per-world slow data
+	platform atomic.Value         // paper, fabric, or neoforge, from the last GET /server
 }
 
 func NewTarget(name string, client *worldapi.Client, opts Options, errors *prometheus.CounterVec) *Target {
@@ -115,6 +117,7 @@ func (s *scrape) Collect(ch chan<- prometheus.Metric) {
 	up := 0.0
 	if serverErr == nil {
 		up = 1
+		t.platform.Store(platform(server))
 		collectServer(out, server)
 	}
 	out.gauge("minecraft_up", "1 when WorldAPI answered the last scrape, 0 when it didn't", up)

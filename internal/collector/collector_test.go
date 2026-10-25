@@ -17,6 +17,8 @@ import (
 
 // fakeWorldAPI answers like WorldAPI with two players, Steve online and Alex offline.
 type fakeWorldAPI struct {
+	// server adds fields to GET /server, such as a mod's platform.
+	server    map[string]any
 	mu        sync.Mutex
 	events    []map[string]any
 	logs      []map[string]any
@@ -55,6 +57,9 @@ func (f *fakeWorldAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body = map[string]any{"name": "Paper", "minecraftVersion": "26.3", "build": 205, "apiVersion": "26.3.build.205-stable",
 			"worldApiVersion": "3.2.0", "maxPlayers": 20, "onlinePlayers": 1, "startedAt": "2026-10-19T15:11:13.423Z", "tickRate": 20.0,
 			"datapacks": []map[string]any{{"enabled": true}, {"enabled": false}}}
+		for key, value := range f.server {
+			body.(map[string]any)[key] = value
+		}
 	case path == "/server/performance":
 		body = map[string]any{
 			"tps":  map[string]any{"oneMinute": 19.5, "fiveMinutes": 19.9, "fifteenMinutes": 20.0},
@@ -216,7 +221,7 @@ func TestScrapeReadsTheServer(t *testing.T) {
 	text := scrapeFilled(t, target)
 	expectLines(t, text,
 		"minecraft_up{} 1",
-		"minecraft_info{api_version=26.3.build.205-stable,brand=Paper,build=205,minecraft_version=26.3,worldapi_version=3.2.0} 1",
+		"minecraft_info{api_version=26.3.build.205-stable,brand=Paper,build=205,minecraft_version=26.3,platform=paper,side=dedicated,worldapi_version=3.2.0} 1",
 		"minecraft_players_online{} 1",
 		"minecraft_datapacks_enabled{} 1",
 		"minecraft_tps{window=1m} 19.5",
@@ -347,7 +352,7 @@ func TestTokenUnlocksPrivateData(t *testing.T) {
 		"minecraft_container_cpu_limit{} 4",
 		"minecraft_process_resident_memory_bytes{} 700",
 		"minecraft_java_info{name=OpenJDK,vendor=Eclipse Adoptium,version=25.0.1} 1",
-		"minecraft_plugin_enabled{plugin=Broken,version=1.0} 0",
+		"minecraft_plugin_enabled{kind=plugin,plugin=Broken,version=1.0} 0",
 		"minecraft_bans{kind=player} 1",
 		"minecraft_operators{} 1",
 		"minecraft_world_villagers{world=world} 40",
@@ -387,7 +392,7 @@ func TestWithoutTokenPrivateDataStaysAway(t *testing.T) {
 func TestStaleSlowDataDrops(t *testing.T) {
 	fake, target, _ := newFixture(t, Options{Players: true, StatsInterval: time.Minute, Token: true})
 	text := scrapeFilled(t, target)
-	expectLines(t, text, "minecraft_plugin_enabled{plugin=WorldAPI,version=3.2.0} 1", "minecraft_world_villagers{world=world} 40")
+	expectLines(t, text, "minecraft_plugin_enabled{kind=plugin,plugin=WorldAPI,version=3.2.0} 1", "minecraft_world_villagers{world=world} 40")
 
 	// WorldAPI stops answering the slow endpoints; their answers go once they're older than staleAfter.
 	fake.mu.Lock()
@@ -422,4 +427,17 @@ func TestGoneWorldDropsItsSummary(t *testing.T) {
 	if kept {
 		t.Error("kept the summary of a world that left")
 	}
+}
+
+func TestModsSayWhereTheyRun(t *testing.T) {
+	fake, target, _ := newFixture(t, Options{Players: true, StatsInterval: time.Minute, Token: true})
+	fake.server = map[string]any{"name": "Fabric", "build": nil, "platform": "fabric", "side": "integrated", "paused": true}
+	// The plugin list's kind follows the platform the scrape before it saw.
+	scrapeFilled(t, target)
+	text := scrapeText(t, target)
+	expectLines(t, text,
+		"minecraft_info{api_version=26.3.build.205-stable,brand=Fabric,build=,minecraft_version=26.3,platform=fabric,side=integrated,worldapi_version=3.2.0} 1",
+		"minecraft_paused{} 1",
+		"minecraft_plugin_enabled{kind=mod,plugin=WorldAPI,version=3.2.0} 1",
+	)
 }

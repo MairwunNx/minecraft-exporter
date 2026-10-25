@@ -15,7 +15,12 @@ type Server struct {
 	TickRate         float64 `json:"tickRate"`
 	Frozen           bool    `json:"frozen"`
 	Whitelist        bool    `json:"whitelist"`
-	Datapacks        []struct {
+	// Platform is paper, fabric, or neoforge; WorldAPI before 4.2.0 runs on Paper only and leaves it out.
+	Platform string `json:"platform"`
+	// Side is dedicated, or integrated for the server under a singleplayer world.
+	Side      string `json:"side"`
+	Paused    bool   `json:"paused"`
+	Datapacks []struct {
 		Enabled bool `json:"enabled"`
 	} `json:"datapacks"`
 }

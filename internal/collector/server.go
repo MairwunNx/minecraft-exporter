@@ -12,9 +12,10 @@ func collectServer(out *emitter, s *worldapi.Server) {
 	if s.Build != nil {
 		build = strconv.Itoa(*s.Build)
 	}
-	out.gauge("minecraft_info", "The server's software and versions", 1,
+	out.gauge("minecraft_info", "The server's software and versions, and where WorldAPI runs: platform paper, fabric, or neoforge; side dedicated or integrated (a singleplayer world)", 1,
 		"brand", s.Name, "minecraft_version", s.MinecraftVersion, "build", build,
-		"api_version", s.APIVersion, "worldapi_version", s.WorldAPIVersion)
+		"api_version", s.APIVersion, "worldapi_version", s.WorldAPIVersion, "platform", platform(s), "side", side(s))
+	out.gauge("minecraft_paused", "1 while a singleplayer game is paused, so nothing ticks", boolValue(s.Paused))
 	if started, err := time.Parse(time.RFC3339Nano, s.StartedAt); err == nil {
 		out.gauge("minecraft_start_time_seconds", "When the server started, in Unix seconds", float64(started.UnixMilli())/1000)
 	}
@@ -142,4 +143,19 @@ func boolValue(b bool) float64 {
 		return 1
 	}
 	return 0
+}
+
+// platform names where WorldAPI runs; before 4.2.0 it ran on Paper only and didn't say.
+func platform(s *worldapi.Server) string {
+	if s.Platform == "" {
+		return "paper"
+	}
+	return s.Platform
+}
+
+func side(s *worldapi.Server) string {
+	if s.Side == "" {
+		return "dedicated"
+	}
+	return s.Side
 }

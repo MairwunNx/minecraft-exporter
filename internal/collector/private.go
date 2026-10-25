@@ -40,9 +40,14 @@ func (t *Target) collectPrivate(out *emitter) {
 	defer t.slowMu.Unlock()
 
 	if plugins, ok := t.slow.values["plugins"].([]worldapi.Plugin); ok {
+		// On Fabric and NeoForge WorldAPI lists the mods there.
+		kind := "plugin"
+		if found, _ := t.platform.Load().(string); found != "" && found != "paper" {
+			kind = "mod"
+		}
 		for _, p := range plugins {
-			out.gauge("minecraft_plugin_enabled", "A plugin on the server and its version: 1 while enabled", boolValue(p.Enabled),
-				"plugin", p.Name, "version", p.Version)
+			out.gauge("minecraft_plugin_enabled", "A plugin or mod on the server and its version: 1 while enabled; kind is plugin or mod", boolValue(p.Enabled),
+				"plugin", p.Name, "version", p.Version, "kind", kind)
 		}
 	}
 	if m, ok := t.slow.values["moderation"].(*worldapi.Moderation); ok {
