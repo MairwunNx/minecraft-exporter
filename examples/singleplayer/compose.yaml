@@ -1,0 +1,40 @@
+# Monitoring for a singleplayer world with the WorldAPI mod: Prometheus and Grafana with the
+# dashboard, on this computer only. WorldAPI in a singleplayer world listens on 127.0.0.1, out of
+# a container's reach, so minecraft-exporter runs beside the game instead:
+#   WORLDAPI_URL=http://127.0.0.1:8110/api/v1 WORLDAPI_TOKEN=<from /worldapi connect> minecraft-exporter
+# Fetch the dashboard into ../grafana/dashboards/ as the wiki's “Installation” page says, run
+# `docker compose up -d`, and open http://localhost:3000 (admin / admin). The wiki's “Singleplayer”
+# page walks through it.
+services:
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    restart: unless-stopped
+    configs: [{ source: prometheus, target: /etc/prometheus/prometheus.yml }]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: [prometheus:/prometheus]
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    restart: unless-stopped
+    # Only this computer opens it.
+    ports: ["127.0.0.1:3000:3000"]
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+      - ../grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+
+configs:
+  prometheus:
+    content: |
+      global: { scrape_interval: 15s }
+      scrape_configs:
+        - job_name: minecraft
+          static_configs:
+            # The exporter on this computer; the instance label names the world on the dashboard.
+            - targets: ["host.docker.internal:10059"]
+              labels: { instance: singleplayer }
+
+volumes:
+  prometheus:
+  grafana:
