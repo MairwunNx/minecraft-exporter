@@ -210,7 +210,8 @@ for t in range(START, END + 1, STEP):
     # Server and performance.
     put(t, "minecraft_up", 1)
     put(t, "minecraft_info", 1, brand="Paper", minecraft_version="26.3", build="205", api_version="26.3.build.205-stable",
-        worldapi_version="3.2.0")
+        worldapi_version="4.2.0", platform="paper", side="dedicated")
+    put(t, "minecraft_paused", 0)
     put(t, "minecraft_start_time_seconds", RESTART if t >= RESTART else NOW - 4 * 86400 - 5000)
     put(t, "minecraft_players_online", n_on)
     put(t, "minecraft_players_max", 20)
@@ -430,7 +431,7 @@ for t in range(START, END + 1, STEP):
     for plugin, version in (("WorldAPI", "3.2.0"), ("LuckPerms", "5.5.17"), ("CoreProtect", "23.1"), ("GriefPrevention", "16.18.7"),
                             ("BlueMap", "5.29"), ("Chunky", "1.5.3"), ("PlaceholderAPI", "2.11.7"), ("TAB", "6.1.2"),
                             ("ViaVersion", "5.6.0"), ("Mo'Joins", "2.3.1"), ("Mo'Afks", "2.2.1")):
-        put(t, "minecraft_plugin_enabled", 1, plugin=plugin.replace("'", "’"), version=version)
+        put(t, "minecraft_plugin_enabled", 1, plugin=plugin.replace("'", "’"), version=version, kind="plugin")
     put(t, "minecraft_exporter_scrape_duration_seconds", round(rng.uniform(0.018, 0.06) + 0.004 * n_on, 4))
     for endpoint in ("server", "server/performance", "worlds", "players/online", "players", "leaderboards", "events",
                      "extensions", "server/system", "server/logs", "server/plugins", "worlds/entities/summary"):
