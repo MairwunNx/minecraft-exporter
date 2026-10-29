@@ -14,7 +14,7 @@
 
 - ⏱️ **Performance:** TPS over one, five, and fifteen minutes, tick times by percentile, CPU, the Java heap, garbage collection, threads.
 - 🌍 **Worlds:** loaded chunks, entities and the most common types, block entities, time of day, the day count, weather.
-- 🧑‍🤝‍🧑 **Players:** who’s online with ping, health, and level, when each player joined and was last seen, and lifetime statistics from the game itself: play time, deaths, kills, blocks mined, distance, diamonds, advancements, and more.
+- 👥 **Players:** who’s online with ping, health, and level, when each player joined and was last seen, and lifetime statistics from the game itself: play time, deaths, kills, blocks mined, distance, diamonds, advancements, and more.
 - 💀 **Activity:** joins, deaths by cause and killer, advancements by frame, first-time players, and events other plugins share through WorldAPI.
 - 🔐 **More with a token:** the host’s load, memory, and disk, the console’s warnings and errors, plugins and their versions, what crowds each world, where each player stands, and who chats how much.
 - 🎮 **Singleplayer too:** run it beside your game, and a ready Compose file brings up Prometheus and Grafana for your world.
