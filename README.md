@@ -2,21 +2,21 @@
 
 [![Release](https://img.shields.io/github/v/release/MairwunNx/minecraft-exporter?label=release)](https://github.com/MairwunNx/minecraft-exporter/releases/latest) [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/MairwunNx/minecraft-exporter/pkgs/container/minecraft-exporter) [![Build](https://img.shields.io/github/actions/workflow/status/MairwunNx/minecraft-exporter/ci.yml?branch=master&label=build)](https://github.com/MairwunNx/minecraft-exporter/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/MairwunNx/minecraft-exporter)](LICENSE)
 
-📊 **minecraft-exporter** turns your Minecraft server into Prometheus metrics, on Paper, Fabric, or NeoForge, and even the world you play alone: TPS and tick times, memory, worlds, every player's statistics, deaths, and advancements. It reads [WorldAPI](https://github.com/MairwunNx/minecraft-worldapi), so the server needs that one plugin or mod and nothing else. Pair it with the [Grafana dashboard](https://github.com/MairwunNx/minecraft-grafana) and see the whole server on one page.
+📊 **minecraft-exporter** turns your Minecraft server into Prometheus metrics, on Paper, Fabric, or NeoForge, and even the world you play alone: TPS and tick times, memory, worlds, every player’s statistics, deaths, and advancements. It reads [WorldAPI](https://github.com/MairwunNx/minecraft-worldapi), so the server needs that one plugin or mod and nothing else. Pair it with the [Grafana dashboard](https://github.com/MairwunNx/minecraft-grafana) and see the whole server on one page.
 
 [Русская версия](README.RU.md)
 
 ![The Minecraft dashboard in Grafana: server, performance, and host](https://raw.githubusercontent.com/MairwunNx/minecraft-grafana/master/media/overview.png)
 
-![Players on the dashboard: who's online and every player's statistics](https://raw.githubusercontent.com/MairwunNx/minecraft-grafana/master/media/players.png)
+![Players on the dashboard: who’s online and every player’s statistics](https://raw.githubusercontent.com/MairwunNx/minecraft-grafana/master/media/players.png)
 
 ## What you get
 
 - ⏱️ **Performance:** TPS over one, five, and fifteen minutes, tick times by percentile, CPU, the Java heap, garbage collection, threads.
 - 🌍 **Worlds:** loaded chunks, entities and the most common types, block entities, time of day, the day count, weather.
-- 🧑‍🤝‍🧑 **Players:** who's online with ping, health, and level, when each player joined and was last seen, and lifetime statistics from the game itself: play time, deaths, kills, blocks mined, distance, diamonds, advancements, and more.
+- 🧑‍🤝‍🧑 **Players:** who’s online with ping, health, and level, when each player joined and was last seen, and lifetime statistics from the game itself: play time, deaths, kills, blocks mined, distance, diamonds, advancements, and more.
 - 💀 **Activity:** joins, deaths by cause and killer, advancements by frame, first-time players, and events other plugins share through WorldAPI.
-- 🔐 **More with a token:** the host's load, memory, and disk, the console's warnings and errors, plugins and their versions, what crowds each world, where each player stands, and who chats how much.
+- 🔐 **More with a token:** the host’s load, memory, and disk, the console’s warnings and errors, plugins and their versions, what crowds each world, where each player stands, and who chats how much.
 - 🎮 **Singleplayer too:** run it beside your game, and a ready Compose file brings up Prometheus and Grafana for your world.
 - 🛰️ **Many servers from one exporter**, the way the blackbox exporter does it.
 - 🪶 **Light on the server:** it runs next to Prometheus, not inside the game, and costs a few HTTP requests per scrape.
@@ -25,7 +25,7 @@
 
 You need [WorldAPI](https://github.com/MairwunNx/minecraft-worldapi) 3.0 or newer on Paper 26.3, or 4.2.0 or newer on Fabric or NeoForge. Playing alone? [Singleplayer](https://github.com/MairwunNx/minecraft-exporter/wiki/Singleplayer) has the steps.
 
-1. Run the exporter with your WorldAPI's address:
+1. Run the exporter with your WorldAPI’s address:
 
    ```sh
    docker run -d -p 10059:10059 -e WORLDAPI_URL=http://your-server:8110/api/v1 ghcr.io/mairwunnx/minecraft-exporter
@@ -62,7 +62,7 @@ For developers:
 - **[Minecraft MCP](https://github.com/MairwunNx/minecraft-mcp)** – lets an AI client read and run a server through WorldAPI.
 - **[Allay](https://github.com/allay-ai/minecraft)** – an AI helper in the game: ask with `/ask`, right in the chat.
 - **[Allay Server](https://github.com/allay-ai/server)** – the backend behind Allay.
-- **[Mo’Joins](https://github.com/MairwunNx/mojoins)** – join and quit messages in each player's language.
-- **[Mo’Afks](https://github.com/MairwunNx/moafks)** – a safe AFK mode that doesn't block the night.
+- **[Mo’Joins](https://github.com/MairwunNx/mojoins)** – join and quit messages in each player’s language.
+- **[Mo’Afks](https://github.com/MairwunNx/moafks)** – a safe AFK mode that doesn’t block the night.
 - **[Mo’Bosses](https://github.com/MairwunNx/mobosses)** – monsters that spawn as bosses with classes, abilities, and loot.
 - **[minecraft-grafana](https://github.com/MairwunNx/minecraft-grafana)** – the Grafana dashboard for WorldAPI.
