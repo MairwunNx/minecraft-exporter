@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1
+
+- **Dependencies.** go.yaml.in/yaml/v3 3.0.6 and prometheus/common 0.73.1.
+
 ## 3.1.0
 
 WorldAPI 4.2.0 runs on Fabric and NeoForge, and in singleplayer worlds. The exporter tells them apart; no metric changes its name.
