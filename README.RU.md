@@ -65,3 +65,9 @@
 - **[Mo’Afks](https://github.com/MairwunNx/moafks)** — безопасный режим AFK, который не мешает пропустить ночь.
 - **[Mo’Bosses](https://github.com/MairwunNx/mobosses)** — монстры, которые появляются боссами с классами, способностями и добычей.
 - **[minecraft-grafana](https://github.com/MairwunNx/minecraft-grafana)** — дашборд Grafana для WorldAPI.
+
+## Раскрытие контента
+
+- 🤖 **Код от ИИ.** Большую часть кода написали ИИ-агенты.
+- 📈 Он читает WorldAPI и отдаёт метрики вашему Prometheus, и больше ничего не уходит.
+- Генеративного ИИ, телеметрии, платных функций и рекламы нет.

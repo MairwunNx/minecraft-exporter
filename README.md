@@ -66,3 +66,9 @@ For developers:
 - **[Mo’Afks](https://github.com/MairwunNx/moafks)** – a safe AFK mode that doesn’t block the night.
 - **[Mo’Bosses](https://github.com/MairwunNx/mobosses)** – monsters that spawn as bosses with classes, abilities, and loot.
 - **[minecraft-grafana](https://github.com/MairwunNx/minecraft-grafana)** – the Grafana dashboard for WorldAPI.
+
+## Content disclosures
+
+- 🤖 **AI-generated code.** AI agents wrote much of the code.
+- 📈 It reads WorldAPI and serves metrics to your Prometheus, and nothing else leaves.
+- No generative AI, telemetry, paid features, or ads.
