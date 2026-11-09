@@ -7,14 +7,14 @@
 # page walks through it.
 services:
   prometheus:
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.16.0
     restart: unless-stopped
     configs: [{ source: prometheus, target: /etc/prometheus/prometheus.yml }]
     extra_hosts: ["host.docker.internal:host-gateway"]
     volumes: [prometheus:/prometheus]
 
   grafana:
-    image: grafana/grafana:13.2.4
+    image: grafana/grafana:13.3.0
     restart: unless-stopped
     # Only this computer opens it.
     ports: ["127.0.0.1:3000:3000"]

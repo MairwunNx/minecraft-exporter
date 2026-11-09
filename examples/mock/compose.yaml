@@ -11,14 +11,14 @@ services:
     volumes: [./:/app:ro, data:/data]
 
   backfill:
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.16.0
     user: "0"
     depends_on: { generate: { condition: service_completed_successfully } }
     entrypoint: [sh, -c, "[ -d /prometheus/wal ] || promtool tsdb create-blocks-from openmetrics /data/metrics.om /prometheus"]
     volumes: [data:/data, prometheus:/prometheus]
 
   prometheus:
-    image: prom/prometheus:v3.15.0
+    image: prom/prometheus:v3.16.0
     user: "0"
     depends_on: { backfill: { condition: service_completed_successfully } }
     command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=30d]
@@ -33,11 +33,11 @@ services:
     volumes: [./:/app:ro, data:/data]
 
   grafana:
-    image: grafana/grafana:13.2.4
+    image: grafana/grafana:13.3.0
     depends_on: [prometheus, worldapi]
     ports: ["3300:3000"]
     environment:
-      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource@4.1.2
+      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource@4.1.6
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
