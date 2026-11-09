@@ -5,7 +5,7 @@ A Prometheus exporter that reads a Minecraft server through WorldAPI (MairwunNx/
 ## Talking to the owner
 
 - Reply in Russian, address the owner as «вы». Quotes «ёлочки», nested „лапки“, an em dash with spaces « — ».
-- Code, comments, commit messages, metric descriptions, README.md, and the wiki are in English: curly quotes, an em dash without spaces or an en dash with spaces, never a hyphen as a dash. README.RU.md follows the Russian rules.
+- Code, comments, commit messages, metric descriptions, README.md, and the wiki are in English: curly quotes, an en dash with spaces (never an em dash glued to the words, never a hyphen as a dash), and no semicolon between clauses: a full stop, a comma, or a colon instead. README.RU.md follows the Russian rules.
 
 ## How it fits together
 
