@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.2
+
+- **Dependencies.** Go 1.27.4, prometheus/common 0.74.0, and golang.org/x/sys 0.50.0.
+
 ## 3.1.1
 
 - **Dependencies.** go.yaml.in/yaml/v3 3.0.6 and prometheus/common 0.73.1.
