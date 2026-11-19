@@ -1,5 +1,7 @@
 # minecraft-exporter
 
+![minecraft-exporter: your Minecraft server in Prometheus](media/hero.webp)
+
 [![Release](https://img.shields.io/github/v/release/MairwunNx/minecraft-exporter?label=release)](https://github.com/MairwunNx/minecraft-exporter/releases/latest) [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/MairwunNx/minecraft-exporter/pkgs/container/minecraft-exporter) [![Build](https://img.shields.io/github/actions/workflow/status/MairwunNx/minecraft-exporter/ci.yml?branch=master&label=build)](https://github.com/MairwunNx/minecraft-exporter/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/MairwunNx/minecraft-exporter)](LICENSE)
 
 📊 **minecraft-exporter** turns your Minecraft server into Prometheus metrics, on Paper, Fabric, or NeoForge, and even the world you play alone: TPS and tick times, memory, worlds, every player’s statistics, deaths, and advancements. It reads [WorldAPI](https://github.com/MairwunNx/minecraft-worldapi), so the server needs that one plugin or mod and nothing else. Pair it with the [Grafana dashboard](https://github.com/MairwunNx/minecraft-grafana) and see the whole server on one page.

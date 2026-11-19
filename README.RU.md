@@ -1,5 +1,7 @@
 # minecraft-exporter
 
+![minecraft-exporter: ваш сервер Minecraft в Prometheus](media/hero.webp)
+
 [![Release](https://img.shields.io/github/v/release/MairwunNx/minecraft-exporter?label=release)](https://github.com/MairwunNx/minecraft-exporter/releases/latest) [![Docker](https://img.shields.io/badge/docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/MairwunNx/minecraft-exporter/pkgs/container/minecraft-exporter) [![Build](https://img.shields.io/github/actions/workflow/status/MairwunNx/minecraft-exporter/ci.yml?branch=master&label=build)](https://github.com/MairwunNx/minecraft-exporter/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/MairwunNx/minecraft-exporter)](LICENSE)
 
 📊 **minecraft-exporter** превращает сервер Minecraft на Paper, Fabric или NeoForge и даже мир, где вы играете в одиночку, в метрики Prometheus: TPS и время тика, память, миры, статистику каждого игрока, смерти и достижения. Он читает [WorldAPI](https://github.com/MairwunNx/minecraft-worldapi), поэтому серверу нужен только этот плагин или мод. Добавьте [дашборд для Grafana](https://github.com/MairwunNx/minecraft-grafana) — и весь сервер будет на одной странице.
